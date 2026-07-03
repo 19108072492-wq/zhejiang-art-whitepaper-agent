@@ -199,6 +199,31 @@ test("generates current and improved whitepaper comparison", () => {
   assert.match(whitepaper.presentationBrief.actions.join(" "), /近三次文化成绩/);
 });
 
+test("keeps a current reference sample when score is below normal tier windows", () => {
+  const lowScoreInput = {
+    ...studentInput,
+    chinese: 70,
+    math: 45,
+    english: 70,
+    electives: [
+      { name: "历史", score: 55 },
+      { name: "政治", score: 55 },
+      { name: "地理", score: 55 }
+    ],
+    professionalScore: 220,
+    targetSchools: "",
+    preferredCities: ""
+  };
+
+  const whitepaper = generateWhitepaper(lowScoreInput, programs);
+
+  assert.equal(whitepaper.scoreProfile.currentCompositeScore, 450);
+  assert.equal(whitepaper.currentMatches.chong[0].school, "浙江传媒学院");
+  assert.equal(whitepaper.comparison.currentTop.school, "浙江传媒学院");
+  assert.equal(whitepaper.comparison.currentTop.diff, -70);
+  assert.match(whitepaper.comparison.currentTop.reason, /参照样本/);
+});
+
 test("validates Zhejiang elective subjects and rejects duplicate selections", () => {
   assert.deepEqual(ZHEJIANG_ELECTIVE_SUBJECTS, ["技术", "地理", "政治", "物理", "化学", "生物", "历史"]);
 

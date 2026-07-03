@@ -595,6 +595,20 @@ function decorateProgram(input, program, totalScore) {
   };
 }
 
+function decorateReferenceProgram(input, program, totalScore) {
+  const minScore = toNumber(program.minScore);
+  if (!minScore) return null;
+
+  const diff = roundScore(totalScore - minScore);
+  return {
+    ...program,
+    diff,
+    tier: "chong",
+    preferenceScore: preferenceScore(input, program),
+    reason: "当前分数距离参考线较远，先作为提分前参照样本。"
+  };
+}
+
 function sortTierItems(tier, items) {
   return [...items].sort((a, b) => {
     if (b.preferenceScore !== a.preferenceScore) return b.preferenceScore - a.preferenceScore;
@@ -610,12 +624,30 @@ export function matchPrograms(input, programs, totalScore) {
     wen: [],
     chong: []
   };
+  const referenceCandidates = [];
 
   for (const program of programs) {
     if (!isProgramAllowed(input, program)) continue;
     const decorated = decorateProgram(input, program, totalScore);
-    if (!decorated) continue;
-    buckets[decorated.tier].push(decorated);
+    if (decorated) {
+      buckets[decorated.tier].push(decorated);
+      continue;
+    }
+
+    const reference = decorateReferenceProgram(input, program, totalScore);
+    if (reference && reference.diff < -35) {
+      referenceCandidates.push(reference);
+    }
+  }
+
+  if (!buckets.bao.length && !buckets.wen.length && !buckets.chong.length && referenceCandidates.length) {
+    buckets.chong.push(
+      [...referenceCandidates].sort((a, b) => {
+        const distanceDiff = Math.abs(a.diff) - Math.abs(b.diff);
+        if (distanceDiff !== 0) return distanceDiff;
+        return b.preferenceScore - a.preferenceScore;
+      })[0]
+    );
   }
 
   return {
