@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>数据管理 - 浙江艺考生升学规划白皮书</title>
+    <link rel="stylesheet" href="./styles.css">
+    <script>
+      if (window.location.protocol === "file:") {
+        window.location.replace("http://127.0.0.1:8787/admin.html");
+      }
+    </script>
+  </head>
+  <body>
+    <main class="shell admin-login-shell" id="admin-login">
+      <section class="panel admin-login-card" aria-labelledby="admin-login-title">
+        <p class="kicker">数据后台</p>
+        <h1 id="admin-login-title">进入数据管理</h1>
+        <p>输入后台密钥后，可以上传院校专业表和一分一段表。</p>
+        <form id="admin-login-form" class="admin-login-form">
+          <label>
+            后台密钥
+            <input id="admin-secret" name="adminSecret" type="password" autocomplete="current-password" required>
+          </label>
+          <button type="submit" class="primary-button">进入后台</button>
+          <p class="form-error" id="admin-login-error" role="alert" hidden></p>
+        </form>
+        <a class="ghost-link" href="./index.html">返回白皮书</a>
+      </section>
+    </main>
+
+    <main class="shell admin-shell" id="admin-app" hidden>
+      <section class="intro admin-intro" aria-labelledby="admin-title">
+        <div>
+          <p class="kicker">数据管理</p>
+          <h1 id="admin-title">维护升学规划数据表</h1>
+          <p class="intro-copy">上传院校专业表和一分一段表，点击保存后，白皮书会读取已保存的数据生成报告。</p>
+          <div class="nav-actions">
+            <a class="ghost-link" href="./index.html">返回白皮书</a>
+            <button type="button" class="ghost-button compact-button" id="admin-logout">退出后台</button>
+          </div>
+        </div>
+        <div class="intro-panel" aria-label="后台状态">
+          <span>Excel</span>
+          <strong>预览 保存</strong>
+          <span>规划数据</span>
+        </div>
+      </section>
+
+      <section class="admin-grid">
+        <div class="admin-stack">
+          <section class="panel admin-card">
+            <div class="panel-heading">
+              <p>上传院校专业表</p>
+            </div>
+            <fieldset class="category-picker" aria-label="院校专业上传类别">
+              <legend>上传类别</legend>
+              <label><input type="radio" name="programCategory" value="美术与设计" checked>美术与设计</label>
+              <label><input type="radio" name="programCategory" value="播音">播音</label>
+              <label><input type="radio" name="programCategory" value="舞蹈">舞蹈</label>
+              <label><input type="radio" name="programCategory" value="书法">书法</label>
+              <label><input type="radio" name="programCategory" value="表导">表导</label>
+            </fieldset>
+            <label class="file-drop">
+              <span>选择 Excel 文件</span>
+              <input id="excel-file" type="file" accept=".xlsx,.xls">
+            </label>
+            <p class="form-note">先选择类别再上传。保留字段：院校代码/名称、院校层次、省份、城市、专业名称、综合分、位次号、培养方向。</p>
+            <div class="button-row">
+              <button type="button" class="primary-button" id="save-import" disabled>保存当前类别数据</button>
+              <button type="button" class="ghost-button" id="clear-import">清空当前类别</button>
+            </div>
+            <p class="status-message" id="import-status" hidden></p>
+            <div class="stored-state" id="stored-state"></div>
+          </section>
+
+          <section class="panel admin-card">
+            <div class="panel-heading">
+              <p>上传一分一段表</p>
+            </div>
+            <fieldset class="category-picker" aria-label="一分一段上传类别">
+              <legend>上传类别</legend>
+              <label><input type="radio" name="rankCategory" value="美术与设计" checked>美术与设计</label>
+              <label><input type="radio" name="rankCategory" value="播音">播音</label>
+              <label><input type="radio" name="rankCategory" value="舞蹈">舞蹈</label>
+              <label><input type="radio" name="rankCategory" value="书法">书法</label>
+              <label><input type="radio" name="rankCategory" value="表导">表导</label>
+            </fieldset>
+            <label class="file-drop">
+              <span>选择 Excel 文件</span>
+              <input id="rank-file" type="file" accept=".xlsx,.xls">
+            </label>
+            <p class="form-note">先选择类别再上传。建议表头包含专业分、位次号；专业成绩按 300 分满分读取。</p>
+            <div class="button-row">
+              <button type="button" class="primary-button" id="save-rank" disabled>保存当前类别数据</button>
+              <button type="button" class="ghost-button" id="clear-rank">清空当前类别</button>
+            </div>
+            <p class="status-message" id="rank-status" hidden></p>
+            <div class="stored-state" id="rank-stored-state"></div>
+          </section>
+        </div>
+
+        <div class="admin-stack">
+          <section class="panel admin-card">
+            <div class="panel-heading">
+              <p>院校专业导入结果</p>
+            </div>
+            <div class="summary-grid" id="import-summary">
+              <article>
+                <span>总行数</span>
+                <strong>0</strong>
+              </article>
+              <article>
+                <span>有效记录</span>
+                <strong>0</strong>
+              </article>
+              <article>
+                <span>跳过行</span>
+                <strong>0</strong>
+              </article>
+            </div>
+            <div class="preview-wrap" id="preview-wrap">
+              <div class="empty-tier">选择 Excel 后，这里显示前 20 条有效记录。</div>
+            </div>
+          </section>
+
+          <section class="panel admin-card">
+            <div class="panel-heading">
+              <p>一分一段导入结果</p>
+            </div>
+            <div class="summary-grid" id="rank-summary">
+              <article>
+                <span>总行数</span>
+                <strong>0</strong>
+              </article>
+              <article>
+                <span>有效记录</span>
+                <strong>0</strong>
+              </article>
+              <article>
+                <span>跳过行</span>
+                <strong>0</strong>
+              </article>
+            </div>
+            <div class="preview-wrap" id="rank-preview-wrap">
+              <div class="empty-tier">选择一分一段表后，这里显示前 20 条有效记录。</div>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <script type="module" src="./src/admin.mjs"></script>
+  </body>
+</html>

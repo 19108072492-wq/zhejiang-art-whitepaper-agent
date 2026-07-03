@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>浙江艺考生升学规划白皮书</title>
+    <meta name="description" content="面向浙江艺考家庭的升学规划白皮书，结合文化课、专业成绩、志愿偏好与录取参考数据，生成阶段性规划建议。">
+    <link rel="stylesheet" href="./styles.css">
+    <script>
+      if (window.location.protocol === "file:") {
+        window.location.replace("http://127.0.0.1:8787/index.html");
+      }
+    </script>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="site-bar" aria-label="页面导航">
+        <a class="brand-mark" href="./index.html">
+          <span>艺考升学规划</span>
+          <strong>浙江版</strong>
+        </a>
+        <div class="site-actions">
+          <nav class="site-nav" aria-label="核心能力">
+            <span>成绩定位</span>
+            <span>院校对比</span>
+            <span>学习计划</span>
+          </nav>
+          <a class="admin-entry" href="./admin.html">数据后台</a>
+        </div>
+      </header>
+
+      <section class="intro" aria-labelledby="page-title">
+        <div>
+          <p class="kicker">家长专属规划白皮书</p>
+          <h1 id="page-title">浙江艺考生升学规划白皮书</h1>
+          <p class="intro-copy">看清孩子当前能到哪一档，也看清提分后可以打开哪些院校层次。</p>
+        </div>
+        <div class="intro-panel" aria-label="规划输出">
+          <div>
+            <span>核心结论</span>
+            <strong>稳 保 冲</strong>
+          </div>
+          <dl>
+            <div><dt>当前定位</dt><dd>立即测算</dd></div>
+            <div><dt>提分空间</dt><dd>分层对比</dd></div>
+          </dl>
+        </div>
+      </section>
+
+      <section class="workspace">
+        <form id="student-form" class="panel form-panel">
+          <div class="panel-heading">
+            <p>填写学生信息</p>
+            <span class="panel-subtitle">约 2 分钟完成</span>
+          </div>
+
+          <section class="form-section">
+            <div class="form-section-title">
+              <span>1</span>
+              <strong>考试类别、专业与文化课</strong>
+            </div>
+            <label>
+              艺考类别
+              <select name="artCategory">
+                <option>美术与设计</option>
+                <option>播音</option>
+                <option>舞蹈</option>
+                <option>书法</option>
+                <option>表导</option>
+              </select>
+            </label>
+            <div class="professional-input-row">
+              <label>
+                专业成绩
+                <input name="professionalScore" type="number" min="0" max="300" required>
+              </label>
+              <p class="derived-note" id="rank-estimate">专业成绩满分 300 分，系统将根据一分一段表估算专业位次。</p>
+            </div>
+
+            <div class="score-grid">
+              <label>
+                语文
+                <input name="chinese" type="number" min="0" max="150" required>
+              </label>
+              <label>
+                数学
+                <input name="math" type="number" min="0" max="150" required>
+              </label>
+              <label>
+                外语语种
+                <select name="foreignLanguage">
+                  <option>英语</option>
+                  <option>日语</option>
+                </select>
+              </label>
+              <label>
+                外语分数
+                <input name="english" type="number" min="0" max="150" required>
+              </label>
+            </div>
+          </section>
+
+          <section class="form-section">
+            <div class="form-section-title">
+              <span>2</span>
+              <strong>选考科目与目标院校</strong>
+            </div>
+            <div class="elective-target-layout">
+              <div>
+                <p class="section-helper">选择 3 门选考科目。</p>
+                <div class="electives">
+                  <div class="elective-row">
+                    <label>
+                      选考一
+                      <select name="elective1Name" required>
+                        <option value="" disabled selected>请选择</option>
+                        <option>技术</option>
+                        <option>地理</option>
+                        <option>政治</option>
+                        <option>物理</option>
+                        <option>化学</option>
+                        <option>生物</option>
+                        <option>历史</option>
+                      </select>
+                    </label>
+                    <label>
+                      分数
+                      <input name="elective1Score" type="number" min="0" max="100" required>
+                    </label>
+                  </div>
+                  <div class="elective-row">
+                    <label>
+                      选考二
+                      <select name="elective2Name" required>
+                        <option value="" disabled selected>请选择</option>
+                        <option>技术</option>
+                        <option>地理</option>
+                        <option>政治</option>
+                        <option>物理</option>
+                        <option>化学</option>
+                        <option>生物</option>
+                        <option>历史</option>
+                      </select>
+                    </label>
+                    <label>
+                      分数
+                      <input name="elective2Score" type="number" min="0" max="100" required>
+                    </label>
+                  </div>
+                  <div class="elective-row">
+                    <label>
+                      选考三
+                      <select name="elective3Name" required>
+                        <option value="" disabled selected>请选择</option>
+                        <option>技术</option>
+                        <option>地理</option>
+                        <option>政治</option>
+                        <option>物理</option>
+                        <option>化学</option>
+                        <option>生物</option>
+                        <option>历史</option>
+                      </select>
+                    </label>
+                    <label>
+                      分数
+                      <input name="elective3Score" type="number" min="0" max="100" required>
+                    </label>
+                  </div>
+                </div>
+              </div>
+              <fieldset class="fieldset-block target-school-compact">
+                <legend>目标院校</legend>
+                <p>最多 3 个，不确定可选暂无。</p>
+                <label>
+                  1
+                  <select name="targetSchool1">
+                    <option value="">暂无</option>
+                  </select>
+                </label>
+                <label>
+                  2
+                  <select name="targetSchool2">
+                    <option value="">暂无</option>
+                  </select>
+                </label>
+                <label>
+                  3
+                  <select name="targetSchool3">
+                    <option value="">暂无</option>
+                  </select>
+                </label>
+              </fieldset>
+            </div>
+          </section>
+
+          <section class="form-section">
+            <div class="form-section-title">
+              <span>3</span>
+              <strong>志愿偏好</strong>
+            </div>
+            <fieldset class="fieldset-block">
+              <legend>喜欢城市</legend>
+              <p>最多选择 2 个，不确定可选暂无。</p>
+              <div class="city-grid">
+                <label>
+                  1
+                  <select name="city1">
+                    <option value="">暂无</option>
+                    <option>杭州</option>
+                    <option>宁波</option>
+                    <option>温州</option>
+                    <option>金华</option>
+                    <option>上海</option>
+                    <option>南京</option>
+                    <option>北京</option>
+                    <option>苏州</option>
+                    <option>广州</option>
+                    <option>深圳</option>
+                  </select>
+                </label>
+                <label>
+                  2
+                  <select name="city2">
+                    <option value="">暂无</option>
+                    <option>杭州</option>
+                    <option>宁波</option>
+                    <option>温州</option>
+                    <option>金华</option>
+                    <option>上海</option>
+                    <option>南京</option>
+                    <option>北京</option>
+                    <option>苏州</option>
+                    <option>广州</option>
+                    <option>深圳</option>
+                  </select>
+                </label>
+              </div>
+            </fieldset>
+          </section>
+
+          <div class="toggle-list">
+            <label>
+              <input type="checkbox" name="acceptOutsideZhejiang" checked>
+              接受省外院校
+            </label>
+            <label>
+              <input type="checkbox" name="acceptSinoForeign">
+              接受中外合作
+            </label>
+            <label>
+              <input type="checkbox" name="acceptHighTuition">
+              接受较高学费
+            </label>
+          </div>
+
+          <button type="submit" class="primary-button">生成规划白皮书</button>
+          <p class="form-error" id="form-error" role="alert" hidden></p>
+        </form>
+
+        <section id="report" class="report" aria-live="polite" hidden></section>
+      </section>
+    </main>
+
+    <script type="module" src="./src/app.mjs"></script>
+  </body>
+</html>
