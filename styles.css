@@ -1225,12 +1225,12 @@ select:focus {
 }
 
 .plan-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
 }
 
 .plan-card {
   display: grid;
-  gap: 12px;
+  gap: 11px;
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 14px;
@@ -1256,7 +1256,29 @@ select:focus {
   line-height: 1.65;
 }
 
-.plan-card ul {
+.plan-diagnosis {
+  border-left: 3px solid var(--accent);
+  padding-left: 10px;
+}
+
+.plan-diagnosis b,
+.plan-task-block > b,
+.plan-checks b {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.plan-task-block {
+  border-radius: 8px;
+  padding: 11px;
+  background: var(--surface-strong);
+}
+
+.plan-card ul,
+.plan-task-block ul {
   display: grid;
   gap: 8px;
   margin: 0;
@@ -1264,14 +1286,45 @@ select:focus {
   list-style: none;
 }
 
+.plan-task-block li {
+  position: relative;
+  padding-left: 14px;
+}
+
+.plan-task-block li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.72em;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
 .plan-card li {
   color: var(--muted);
   line-height: 1.55;
 }
 
-.plan-card li b {
+.plan-timeline li b {
   margin-right: 8px;
   color: var(--ink);
+}
+
+.plan-checks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.plan-checks p {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: color-mix(in srgb, var(--surface-strong) 80%, white);
+  font-size: 12px;
+  line-height: 1.55;
 }
 
 .empty-tier {
@@ -1586,6 +1639,10 @@ select:focus {
 
   .comparison-row h3 {
     align-self: auto;
+  }
+
+  .plan-checks {
+    grid-template-columns: 1fr;
   }
 }
 

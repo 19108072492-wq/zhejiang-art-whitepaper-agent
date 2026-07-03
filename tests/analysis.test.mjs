@@ -143,6 +143,25 @@ test("prioritizes the largest gaps in the study plan", () => {
   assert.equal(plan.at(-1).gap, 1);
 });
 
+test("creates deep non-repetitive subject-specific study plans", () => {
+  const profile = calculateScoreProfile(studentInput);
+  const plan = buildStudyPlan(profile);
+  const math = plan.find((item) => item.subject === "数学");
+  const chinese = plan.find((item) => item.subject === "语文");
+  const english = plan.find((item) => item.subject === "英语");
+  const history = plan.find((item) => item.subject === "历史");
+
+  assert.equal(new Set(plan.map((item) => item.days30)).size, plan.length);
+  assert.equal(plan.every((item) => item.diagnosis && item.checkpoint && item.parentAction), true);
+  assert.equal(plan.every((item) => Array.isArray(item.keyTasks) && item.keyTasks.length >= 3), true);
+  assert.match(math.days30, /函数|数列|计算/);
+  assert.match(chinese.days30, /作文|文言|阅读/);
+  assert.match(english.days30, /词汇|阅读|写作/);
+  assert.match(history.days30, /时间轴|史实|材料/);
+  assert.match(math.checkpoint, /正确率|限时/);
+  assert.match(chinese.parentAction, /作文|素材|面批/);
+});
+
 test("adds score-band subject analysis and knowledge advice", () => {
   const profile = calculateScoreProfile(studentInput);
   const math = profile.subjects.find((subject) => subject.name === "数学");

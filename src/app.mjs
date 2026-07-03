@@ -426,18 +426,28 @@ function renderPlan(plan) {
         <p>30 / 60 / 90 天学习计划</p>
       </div>
       <div class="plan-grid">
-        ${plan.slice(0, 4).map((item) => `
+        ${plan.map((item) => `
           <article class="plan-card">
             <div>
               <span>${escapeHtml(item.level)}</span>
               <strong>${escapeHtml(item.subject)} 差 ${item.gap} 分</strong>
             </div>
-            <p>${escapeHtml(item.focus)}</p>
-            <ul>
+            <p class="plan-diagnosis"><b>现状诊断</b>${escapeHtml(item.diagnosis || item.focus)}</p>
+            <div class="plan-task-block">
+              <b>关键任务</b>
+              <ul>
+                ${(item.keyTasks ?? []).map((task) => `<li>${escapeHtml(task)}</li>`).join("")}
+              </ul>
+            </div>
+            <ul class="plan-timeline">
               <li><b>30 天</b>${escapeHtml(item.days30)}</li>
               <li><b>60 天</b>${escapeHtml(item.days60)}</li>
               <li><b>90 天</b>${escapeHtml(item.days90)}</li>
             </ul>
+            <div class="plan-checks">
+              <p><b>验收指标</b>${escapeHtml(item.checkpoint || "看错题订正和限时训练记录是否稳定。")}</p>
+              <p><b>家长跟进</b>${escapeHtml(item.parentAction || "每周看一次错题分类和阶段小测记录。")}</p>
+            </div>
           </article>
         `).join("")}
       </div>

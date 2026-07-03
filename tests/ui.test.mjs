@@ -23,6 +23,16 @@ test("report includes subject knowledge advice section", async () => {
   assert.equal(appScript.includes("提分点"), true);
 });
 
+test("study plan renders diagnosis, tasks, checkpoints, and parent follow-up", async () => {
+  const appScript = await readFile(resolve(root, "src/app.mjs"), "utf8");
+
+  assert.equal(appScript.includes("现状诊断"), true);
+  assert.equal(appScript.includes("关键任务"), true);
+  assert.equal(appScript.includes("验收指标"), true);
+  assert.equal(appScript.includes("家长跟进"), true);
+  assert.equal(appScript.includes("plan.slice(0, 4)"), false);
+});
+
 test("report includes consultant-friendly interview section", async () => {
   const appScript = await readFile(resolve(root, "src/app.mjs"), "utf8");
   const styles = await readFile(resolve(root, "styles.css"), "utf8");
