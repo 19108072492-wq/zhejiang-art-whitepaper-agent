@@ -168,6 +168,17 @@ function renderProgramPlaceholder(text) {
   return `<div class="empty-tier">${escapeHtml(text)}</div>`;
 }
 
+function currentTierFallback(tier, lineInsight) {
+  if (!lineInsight) return "暂无典型样本";
+  if (lineInsight.status === "below") {
+    return `暂无可${tierTitle(tier).replace("观察", "")}样本，${lineInsight.message}。最低参考：${lineInsight.floorSchool} ${lineInsight.floorProgram}，综合分 ${formatScore(lineInsight.floorScore)}。`;
+  }
+  if (tier === "bao") {
+    return `暂无可保样本，${lineInsight.message}。建议先把保底余量拉到 20 分以上。`;
+  }
+  return `当前该档暂无典型样本，${lineInsight.message}。`;
+}
+
 function getProgramSource(artCategory = form.elements.namedItem("artCategory")?.value ?? "") {
   const payload = loadProgramPayload();
   if (payload.records.length > 0 && programsForCategory(payload.records, artCategory).length > 0) {
@@ -228,7 +239,7 @@ function updateRankEstimate() {
   rankEstimateNode.classList.remove("muted");
 }
 
-function renderTierComparison(currentMatches, improvedMatches) {
+function renderTierComparison(currentMatches, improvedMatches, lineInsight) {
   const tiers = ["bao", "wen", "chong"];
   return `
     <section class="panel result-section comparison-section">
@@ -243,7 +254,7 @@ function renderTierComparison(currentMatches, improvedMatches) {
               <span>提分前</span>
               ${currentMatches[tier].length
                 ? currentMatches[tier].slice(0, 2).map(renderCompactProgram).join("")
-                : renderProgramPlaceholder("暂无典型样本")}
+                : renderProgramPlaceholder(currentTierFallback(tier, lineInsight))}
             </div>
             <div class="comparison-column improved">
               <span>提分后</span>
@@ -452,7 +463,7 @@ function renderReport(whitepaper, source, input) {
     ${renderProfessionalPosition(input, whitepaper.scoreProfile)}
     ${renderComparisonHero(whitepaper.comparison)}
     ${renderSubjectTable(whitepaper.scoreProfile)}
-    ${renderTierComparison(whitepaper.currentMatches, whitepaper.improvedMatches)}
+    ${renderTierComparison(whitepaper.currentMatches, whitepaper.improvedMatches, whitepaper.lineInsight)}
     ${renderPlan(whitepaper.studyPlan)}
   `;
 }

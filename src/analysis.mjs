@@ -682,6 +682,35 @@ function topByReferenceScore(programs) {
   return [...programs].sort((a, b) => toNumber(b.minScore) - toNumber(a.minScore))[0] ?? null;
 }
 
+function buildLineInsight(input, programs, currentCompositeScore) {
+  const floorProgram = (Array.isArray(programs) ? programs : [])
+    .filter((program) => isProgramAllowed(input, program))
+    .filter((program) => toNumber(program.minScore) > 0)
+    .sort((a, b) => toNumber(a.minScore) - toNumber(b.minScore))[0];
+
+  if (!floorProgram) return null;
+
+  const floorScore = toNumber(floorProgram.minScore);
+  const margin = roundScore(Math.max(0, currentCompositeScore - floorScore));
+  const gap = roundScore(Math.max(0, floorScore - currentCompositeScore));
+  const status = gap > 0 ? "below" : margin < 20 ? "thin-margin" : "above";
+  const message = gap > 0
+    ? `距离最低上线还差 ${gap} 分`
+    : margin < 20
+      ? `已过最低上线 ${margin} 分，但还没有形成保底余量`
+      : `已过最低上线 ${margin} 分`;
+
+  return {
+    floorSchool: floorProgram.school,
+    floorProgram: floorProgram.program,
+    floorScore,
+    gap,
+    margin,
+    status,
+    message
+  };
+}
+
 function buildComparison(currentMatches, improvedMatches) {
   const currentPrograms = flattenMatches(currentMatches);
   const improvedPrograms = flattenMatches(improvedMatches);
@@ -769,6 +798,7 @@ export function generateWhitepaper(input, programs) {
   const currentMatches = matchPrograms(input, programs, scoreProfile.currentCompositeScore);
   const improvedMatches = matchPrograms(input, programs, scoreProfile.targetCompositeScore);
   const comparison = buildComparison(currentMatches, improvedMatches);
+  const lineInsight = buildLineInsight(input, programs, scoreProfile.currentCompositeScore);
   const opportunityTags = unique([
     ...collectOpportunityTags(currentMatches),
     ...collectOpportunityTags(improvedMatches)
@@ -780,6 +810,7 @@ export function generateWhitepaper(input, programs) {
     currentMatches,
     improvedMatches,
     comparison,
+    lineInsight,
     opportunityTags,
     presentationBrief: buildPresentationBrief(input, scoreProfile, comparison),
     summary: buildSummary(scoreProfile, comparison)

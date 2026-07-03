@@ -222,6 +222,15 @@ test("keeps a current reference sample when score is below normal tier windows",
   assert.equal(whitepaper.comparison.currentTop.school, "浙江传媒学院");
   assert.equal(whitepaper.comparison.currentTop.diff, -70);
   assert.match(whitepaper.comparison.currentTop.reason, /参照样本/);
+  assert.deepEqual(whitepaper.lineInsight, {
+    floorSchool: "浙江传媒学院",
+    floorProgram: "数字媒体艺术",
+    floorScore: 520,
+    gap: 70,
+    margin: 0,
+    status: "below",
+    message: "距离最低上线还差 70 分"
+  });
 });
 
 test("validates Zhejiang elective subjects and rejects duplicate selections", () => {
