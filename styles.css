@@ -25,6 +25,8 @@
   --home-content-width: 760px;
   --home-title-size: clamp(30px, 3.6vw, 48px);
   --home-hero-gap: 10px;
+  --mobile-title-size: clamp(29px, 8.2vw, 32px);
+  --mobile-input-height: 46px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -1986,68 +1988,200 @@ select:focus {
 }
 
 @media (max-width: 640px) {
+  body {
+    background:
+      linear-gradient(90deg, rgba(255, 220, 0, 0.7) 0 8px, transparent 8px),
+      radial-gradient(circle at 96% 4%, rgba(0, 99, 173, 0.08), transparent 18rem),
+      linear-gradient(180deg, var(--top-wash), #ffffff 20rem, var(--bg) 100%),
+      var(--bg);
+  }
+
   .shell {
-    width: min(100% - 20px, 1180px);
-    padding: 18px 0 36px;
+    width: min(100% - 24px, 1180px);
+    padding: 12px 0 30px;
   }
 
   .site-bar {
-    min-height: 54px;
-    margin-bottom: 22px;
+    min-height: 48px;
+    gap: 10px;
+    margin-bottom: 14px;
   }
 
   .site-nav {
     display: none;
   }
 
+  .site-actions {
+    gap: 8px;
+  }
+
+  .brand-mark {
+    gap: 9px;
+  }
+
+  .admin-entry {
+    min-height: 34px;
+    border-radius: 8px;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+
+  .intro {
+    margin-bottom: 8px;
+    padding-top: 0;
+  }
+
+  .kicker {
+    margin-bottom: 6px;
+    font-size: 11px;
+  }
+
   h1 {
-    font-size: 42px;
-    line-height: 1.12;
+    max-width: 360px;
+    margin-bottom: 7px;
+    font-size: var(--mobile-title-size);
+    line-height: 1.06;
   }
 
   h1 mark {
-    margin: 10px 0 0;
-    padding: 0 12px 4px;
+    margin: 4px 0 0;
+    padding: 0 8px 3px;
+    border-radius: 7px;
   }
 
   .brand-logo,
   .intro-panel > img,
   .report-brand-row img {
-    width: 48px;
-    height: 48px;
-    border-width: 4px;
+    width: 42px;
+    height: 42px;
+    border-width: 3px;
   }
 
   .brand-mark em {
-    font-size: 22px;
+    font-size: 20px;
   }
 
   .brand-mark strong {
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .poster-ribbon {
-    font-size: 30px;
-    border-bottom-width: 6px;
+    border-left-width: 4px;
+    padding: 2px 0 2px 10px;
+    font-size: 22px;
+    line-height: 1.18;
+  }
+
+  .intro-copy {
+    margin-top: 8px;
+    padding: 9px 11px;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .poster-feature-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .poster-feature-row span {
+    min-height: 38px;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px;
+    box-shadow: none;
+    font-size: 12px;
+  }
+
+  .poster-feature-row b {
+    width: 24px;
+    height: 24px;
+    border-radius: 7px;
+    font-size: 12px;
+  }
+
+  .form-panel {
+    gap: 12px;
+    border-top-width: 6px;
+    padding: 14px;
+  }
+
+  .panel-heading p,
+  .section-heading p {
+    font-size: 18px;
+  }
+
+  .panel-subtitle {
+    font-size: 11px;
+  }
+
+  .form-section {
+    gap: 11px;
+    padding-top: 14px;
+  }
+
+  .form-section-title strong {
+    font-size: 15px;
+    line-height: 1.25;
+  }
+
+  label {
+    gap: 6px;
+    font-size: 12px;
+  }
+
+  input,
+  select {
+    min-height: var(--mobile-input-height);
+    font-size: 16px;
+  }
+
+  .fieldset-block {
+    gap: 9px;
+    padding: 11px;
   }
 
   .score-grid,
-  .professional-input-row,
-  .score-summary,
   .city-grid,
+  .report-score-board article {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .professional-input-row,
   .option-grid,
   .summary-grid,
-  .poster-feature-row,
   .button-row {
     grid-template-columns: 1fr;
   }
 
+  .score-summary {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .score-summary::-webkit-scrollbar {
+    display: none;
+  }
+
+  .metric-card {
+    min-width: 210px;
+    min-height: 106px;
+    padding: 14px;
+    scroll-snap-align: start;
+  }
+
   .report-score-board article {
-    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 10px;
   }
 
   .report-score-board strong {
-    font-size: 34px;
+    font-size: 30px;
   }
 
   .lift-heading {
@@ -2060,7 +2194,113 @@ select:focus {
   }
 
   .elective-row {
-    grid-template-columns: minmax(108px, 136px) 78px;
+    grid-template-columns: minmax(0, 1fr) 92px;
+    gap: 8px;
+  }
+
+  .elective-row select,
+  .elective-row input {
+    min-height: 44px;
+    font-size: 16px;
+  }
+
+  .target-school-compact label {
+    grid-template-columns: 20px minmax(0, 1fr);
+  }
+
+  .toggle-list {
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .primary-button,
+  .ghost-button {
+    min-height: 50px;
+    font-size: 16px;
+  }
+
+  .report {
+    gap: 12px;
+  }
+
+  .report-actions {
+    justify-content: flex-start;
+  }
+
+  .compact-button {
+    min-height: 38px;
+    padding: 0 12px;
+    font-size: 13px;
+  }
+
+  .empty-panel,
+  .hero-report,
+  .result-section {
+    padding: 16px;
+  }
+
+  .report-cover::after {
+    width: 96px;
+    height: 96px;
+    right: -42px;
+    top: -42px;
+    border-width: 12px;
+  }
+
+  .report-brand-row {
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .report-brand-row strong {
+    font-size: 20px;
+  }
+
+  .report-brand-row span {
+    font-size: 12px;
+  }
+
+  .report-hero-copy h2 {
+    margin-bottom: 10px;
+    font-size: 21px;
+    line-height: 1.24;
+  }
+
+  .hero-report p,
+  .empty-panel p {
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .report-score-board {
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .parent-narrative {
+    padding: 12px;
+  }
+
+  .parent-narrative p {
+    font-size: 14px;
+    line-height: 1.62;
+  }
+
+  .presentation-card,
+  .plan-card,
+  .subject-advice-card,
+  .program-card {
+    padding: 12px;
+  }
+
+  .program-card dl,
+  .plan-checks {
+    grid-template-columns: 1fr;
+  }
+
+  .comparison-row {
+    gap: 10px;
+    padding: 10px;
   }
 
   .subject-row {
@@ -2070,10 +2310,6 @@ select:focus {
   .subject-row span:nth-of-type(2),
   .subject-row b {
     grid-column: auto;
-  }
-
-  .metric-card {
-    min-height: 106px;
   }
 }
 

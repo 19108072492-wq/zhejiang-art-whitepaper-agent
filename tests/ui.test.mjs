@@ -49,8 +49,12 @@ test("uses Feifan poster brand styling and report layout", async () => {
   assert.equal(styles.includes("--home-title-size"), true);
   assert.equal(styles.includes("--home-hero-gap"), true);
   assert.equal(styles.includes("--home-content-width"), true);
+  assert.equal(styles.includes("--mobile-title-size"), true);
+  assert.equal(styles.includes("--mobile-input-height"), true);
   assert.equal(styles.includes("@media (max-width: 1180px)"), true);
   assert.equal(styles.includes(".intro-panel {\n    display: none;"), true);
+  assert.equal(styles.includes("scroll-snap-type: x mandatory"), true);
+  assert.equal(styles.includes(".poster-feature-row {\n    grid-template-columns: repeat(3, minmax(0, 1fr));"), true);
   assert.equal(styles.includes(".poster-ribbon"), true);
   assert.equal(styles.includes(".report-cover"), true);
   assert.equal(styles.includes(".report-score-board"), true);
