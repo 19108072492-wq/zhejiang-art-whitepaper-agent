@@ -33,6 +33,27 @@ test("study plan renders diagnosis, tasks, checkpoints, and parent follow-up", a
   assert.equal(appScript.includes("plan.slice(0, 4)"), false);
 });
 
+test("uses Feifan poster brand styling and report layout", async () => {
+  const indexHtml = await readFile(resolve(root, "index.html"), "utf8");
+  const appScript = await readFile(resolve(root, "src/app.mjs"), "utf8");
+  const styles = await readFile(resolve(root, "styles.css"), "utf8");
+  const logo = await readFile(resolve(root, "assets/feifan-logo.jpg")).catch(() => new Uint8Array());
+
+  assert.equal(indexHtml.includes("./assets/feifan-logo.jpg"), true);
+  assert.equal(indexHtml.includes("brand-logo"), true);
+  assert.equal(indexHtml.includes("非凡教育"), true);
+  assert.equal(appScript.includes("非凡教育"), true);
+  assert.equal(`${indexHtml}\n${appScript}`.includes("小凡择校"), false);
+  assert.equal(styles.includes("--brand-yellow"), true);
+  assert.equal(styles.includes("--brand-blue"), true);
+  assert.equal(styles.includes(".poster-ribbon"), true);
+  assert.equal(styles.includes(".report-cover"), true);
+  assert.equal(styles.includes(".report-score-board"), true);
+  assert.equal(appScript.includes("report-brand-row"), true);
+  assert.equal(appScript.includes("report-hero-grid"), true);
+  assert.ok(logo.byteLength > 1000);
+});
+
 test("front end waits for parent narratives before rendering report", async () => {
   const appScript = await readFile(resolve(root, "src/app.mjs"), "utf8");
 

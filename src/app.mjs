@@ -558,10 +558,35 @@ function renderReport(whitepaper, source, input, narratives = renderParentNarrat
     <div class="report-actions">
       <button type="button" class="ghost-button compact-button" data-action="edit-input">修改信息</button>
     </div>
-    <section class="panel hero-report">
-      <p class="kicker">升学规划白皮书</p>
-      <h2>${escapeHtml(whitepaper.summary)}</h2>
-      <p class="data-source-note">${escapeHtml(source.note)}</p>
+    <section class="panel hero-report report-cover">
+      <div class="report-brand-row">
+        <img src="./assets/feifan-logo.jpg" alt="非凡教育标志">
+        <div>
+          <strong>非凡教育</strong>
+          <span>浙江艺考生升学规划白皮书</span>
+        </div>
+      </div>
+      <div class="report-hero-grid">
+        <div class="report-hero-copy">
+          <p class="kicker">生成报告</p>
+          <h2>${escapeHtml(whitepaper.summary)}</h2>
+          <p class="data-source-note">${escapeHtml(source.note)}</p>
+        </div>
+        <div class="report-score-board" aria-label="核心分数">
+          <article>
+            <span>当前综合分</span>
+            <strong>${formatScore(whitepaper.scoreProfile.currentCompositeScore)}</strong>
+          </article>
+          <article>
+            <span>目标综合分</span>
+            <strong>${formatScore(whitepaper.scoreProfile.targetCompositeScore)}</strong>
+          </article>
+          <article class="gap">
+            <span>差距</span>
+            <strong>${formatScore(whitepaper.scoreProfile.compositeGap)}</strong>
+          </article>
+        </div>
+      </div>
       ${renderNarrativeBlock("家长版核心解读", "parentSummary", narratives)}
     </section>
     <section class="panel result-section">
