@@ -46,6 +46,11 @@ test("uses Feifan poster brand styling and report layout", async () => {
   assert.equal(`${indexHtml}\n${appScript}`.includes("小凡择校"), false);
   assert.equal(styles.includes("--brand-yellow"), true);
   assert.equal(styles.includes("--brand-blue"), true);
+  assert.equal(styles.includes("--home-title-size"), true);
+  assert.equal(styles.includes("--home-hero-gap"), true);
+  assert.equal(styles.includes("--home-content-width"), true);
+  assert.equal(styles.includes("@media (max-width: 1180px)"), true);
+  assert.equal(styles.includes(".intro-panel {\n    display: none;"), true);
   assert.equal(styles.includes(".poster-ribbon"), true);
   assert.equal(styles.includes(".report-cover"), true);
   assert.equal(styles.includes(".report-score-board"), true);
