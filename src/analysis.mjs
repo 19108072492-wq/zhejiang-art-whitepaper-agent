@@ -51,7 +51,7 @@ const SUBJECT_ADVICE = {
     },
     middle: {
       boostPoint: "重点提升材料整合、语言表达和作文论证深度，冲击稳定高分题。",
-      knowledgeAdvice: "信息概括、语言文字运用、古诗文比较阅读、作文素材转化。"
+      knowledgeAdvice: "信息概括、语言文字运用、古诗文比较阅读、作文素材运用。"
     },
     high: {
       boostPoint: "保持卷面节奏和表达质量，复盘高阶题的失分细节。",
@@ -123,7 +123,7 @@ const SUBJECT_ADVICE = {
     },
     middle: {
       boostPoint: "训练材料分层和规范术语组合，减少答得多但踩点少。",
-      knowledgeAdvice: "设问类型、主体分析、原因措施意义类模板、时政材料转化。"
+      knowledgeAdvice: "设问类型、主体分析、原因措施意义类模板、时政材料迁移。"
     },
     high: {
       boostPoint: "提高综合设问拆解和热点迁移能力，让答案更有层次。",
@@ -380,7 +380,7 @@ function enrichSubjectAnalysis(subject) {
   return {
     ...subject,
     scoreBand: SCORE_BANDS[bandKey],
-    scoreStatus: `当前处于${SCORE_BANDS[bandKey]}，建议先处理最容易转化为分数的确定性失分。`,
+    scoreStatus: `当前处于${SCORE_BANDS[bandKey]}，建议先处理最容易形成分数提升的确定性失分。`,
     boostPoint: advice.boostPoint,
     knowledgeAdvice: advice.knowledgeAdvice
   };
@@ -523,7 +523,7 @@ const STUDY_PLAN_GUIDES = {
     keyTasks: [
       "建立文言实词、虚词和古诗鉴赏术语清单，每次练习只追一个失分原因。",
       "现代文按题型拆分为概括、作用、赏析、探究四类，答案必须先标材料依据。",
-      "作文固定审题、立意、分论点、素材转化四步，每周完成一篇提纲和一段升格。"
+      "作文固定审题、立意、分论点、素材运用四步，每周完成一篇提纲和一段升格。"
     ],
     days30: "用错题本重做阅读和文言失分题，同时搭建作文素材库，先把文言、阅读、作文的确定性失分降下来。",
     days60: "按题型做专题训练，重点练现代文规范表达、古诗鉴赏角度和作文分论点展开。",
@@ -575,7 +575,7 @@ const STUDY_PLAN_GUIDES = {
     keyTasks: [
       "把经济、政治、哲学、法治模块整理成主体和关键词表。",
       "主观题按设问类型区分原因、意义、措施、体现，避免模板乱套。",
-      "结合时政材料训练关键词提取，把政策话术转成课本术语。"
+      "结合时政材料训练关键词提取，把政策表达转换成课本术语。"
     ],
     days30: "补核心概念和模块框架，先把术语错用、主体错位、答题无关键词的问题压下去。",
     days60: "按设问类型做材料题训练，每题固定写材料关键词、调用知识、组织答案三步。",
@@ -907,14 +907,14 @@ function buildPresentationBrief(input, scoreProfile, comparison) {
   const targetSchools = splitPreference(input.targetSchools).slice(0, 3);
   const cities = splitPreference(input.preferredCities).slice(0, 2);
   const targetText = targetSchools.length ? `目标院校关注 ${targetSchools.join("、")}。` : "目标院校暂未锁定。";
-  const cityText = cities.length ? `城市偏好为 ${cities.join("、")}。` : "城市边界可在面谈中继续确认。";
+  const cityText = cities.length ? `城市偏好为 ${cities.join("、")}。` : "城市边界可在后续补充确认。";
   const currentSchool = comparison.currentTop?.school ?? "当前稳保冲样本";
   const improvedSchool = comparison.unlockedPrograms[0]?.school ?? comparison.improvedTop?.school;
   const compareTitle = comparison.scoreLift > 0 && improvedSchool
     ? `提分后可新增关注 ${improvedSchool}`
     : "先稳住当前可达院校";
   const compareDetail = comparison.scoreLift > 0
-    ? `最高参考样本提升约 ${comparison.scoreLift} 分，适合现场展示提分带来的院校变化。`
+    ? `最高参考样本提升约 ${comparison.scoreLift} 分，适合用来理解提分带来的院校变化。`
     : "当前目标综合分先用于稳定可达层次，后续用正式数据继续细筛冲刺机会。";
 
   return {
@@ -922,12 +922,12 @@ function buildPresentationBrief(input, scoreProfile, comparison) {
       {
         label: "家长先看",
         title: `当前综合分 ${scoreProfile.currentCompositeScore}`,
-        detail: `当前可重点讲 ${currentSchool} 这一档，${targetText}${cityText}`
+        detail: `当前建议重点关注 ${currentSchool} 这一档，${targetText}${cityText}`
       },
       {
         label: "提分抓手",
         title: `文化课差 ${scoreProfile.totalGap} 分`,
-        detail: `面谈时先抓 ${subjectText}，用各科失分点和 30 天任务解释为什么能提。`
+        detail: `建议优先关注 ${subjectText}，结合各科失分点和 30 天任务判断短期提升空间。`
       },
       {
         label: "院校对比",
@@ -941,8 +941,8 @@ function buildPresentationBrief(input, scoreProfile, comparison) {
       }
     ],
     actions: [
-      "带家长核对近三次文化成绩和专业成绩波动。",
-      `现场确认 30 天主攻科目：${subjectText}。`,
+      "建议家长补充核对近三次文化成绩和专业成绩波动。",
+      `后续建议补充确认 30 天主攻科目：${subjectText}。`,
       "补齐目标院校、城市、学费接受度后，生成第二版稳保冲清单。"
     ]
   };

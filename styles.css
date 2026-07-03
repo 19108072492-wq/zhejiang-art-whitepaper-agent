@@ -790,6 +790,75 @@ select:focus {
   line-height: 1.45;
 }
 
+.parent-narrative {
+  display: grid;
+  gap: 8px;
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+  padding: 14px;
+  background: var(--surface-strong);
+}
+
+.parent-narrative span {
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.parent-narrative p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.75;
+}
+
+.parent-narrative.is-loading p {
+  color: var(--muted);
+}
+
+.target-gap-section {
+  display: grid;
+  gap: 14px;
+}
+
+.target-gap-grid {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.45fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: stretch;
+}
+
+.target-gap-list,
+.target-program-list {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--surface);
+}
+
+.target-gap-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-content: start;
+}
+
+.target-gap-list span {
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line));
+  border-radius: 999px;
+  padding: 7px 10px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.target-program-list {
+  display: grid;
+  gap: 8px;
+}
+
 .subject-list,
 .plan-grid,
 .tier-grid {
@@ -1629,6 +1698,7 @@ select:focus {
   .action-strip,
   .subject-advice-grid,
   .professional-position,
+  .target-gap-grid,
   .elective-target-layout {
     grid-template-columns: 1fr;
   }

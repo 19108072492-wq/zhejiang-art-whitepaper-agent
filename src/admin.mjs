@@ -1,4 +1,4 @@
-import { normalizeImportedRows, normalizeRankRows } from "./data-import.mjs";
+import { mergeRecordsByDetectedCategories, normalizeImportedRows, normalizeRankRows } from "./data-import.mjs";
 import {
   clearPrograms,
   clearRankTable,
@@ -32,7 +32,6 @@ const rankSummaryNode = document.querySelector("#rank-summary");
 const rankPreviewWrap = document.querySelector("#rank-preview-wrap");
 const rankStoredState = document.querySelector("#rank-stored-state");
 const programCategoryInputs = Array.from(document.querySelectorAll('input[name="programCategory"]'));
-const rankCategoryInputs = Array.from(document.querySelectorAll('input[name="rankCategory"]'));
 
 let currentImport = null;
 let currentRankImport = null;
@@ -52,6 +51,24 @@ function setLoginError(message) {
   if (!adminLoginError) return;
   adminLoginError.textContent = message;
   adminLoginError.hidden = !message;
+}
+
+function sanitizeAdminSecretUrl() {
+  const url = new URL(window.location.href);
+  if (!url.searchParams.has("adminSecret")) return;
+  url.searchParams.delete("adminSecret");
+  const nextUrl = `${url.pathname}${url.search}${url.hash}`;
+  window.history.replaceState({}, document.title, nextUrl);
+}
+
+function unlockAdmin() {
+  sessionStorage.setItem(ADMIN_SESSION_KEY, "true");
+  setLoginError("");
+  showAdmin();
+}
+
+function getAdminSecretFromUrl() {
+  return new URLSearchParams(window.location.search).get("adminSecret") || "";
 }
 
 function escapeHtml(value) {
@@ -213,14 +230,14 @@ function renderPreview(records) {
 
 function renderRankPreview(records) {
   if (!records.length) {
-    rankPreviewWrap.innerHTML = '<div class="empty-tier">没有识别到有效记录，请检查专业分和位次字段。</div>';
+    rankPreviewWrap.innerHTML = '<div class="empty-tier">没有识别到有效记录，请检查科类或方向名称、综合分成绩、人数累计字段。</div>';
     return;
   }
 
   const columns = [
     ["类别", "artCategory"],
-    ["专业分", "score"],
-    ["位次号", "rank"]
+    ["分数", "score"],
+    ["累计人数/位次", "rank"]
   ];
 
   rankPreviewWrap.innerHTML = `
@@ -241,7 +258,7 @@ function renderRankPreview(records) {
   `;
 }
 
-function normalizeWorkbookSheets(workbook, normalizer, category) {
+function normalizeWorkbookSheets(workbook, normalizer, options = {}) {
   const totals = {
     records: [],
     skippedRows: 0,
@@ -251,7 +268,7 @@ function normalizeWorkbookSheets(workbook, normalizer, category) {
   for (const sheetName of workbook.SheetNames) {
     const sheet = workbook.Sheets[sheetName];
     const rows = window.XLSX.utils.sheet_to_json(sheet, { defval: "" });
-    const result = normalizer(rows, { categoryHint: sheetName, forceCategory: category });
+    const result = normalizer(rows, { categoryHint: sheetName, ...options });
     totals.records.push(...result.records);
     totals.skippedRows += result.skippedRows;
     totals.totalRows += result.totalRows;
@@ -281,7 +298,7 @@ async function handleFile(file) {
       setStatus("这个 Excel 没有可读取的工作表。", "error");
       return;
     }
-    const result = normalizeWorkbookSheets(workbook, normalizeImportedRows, category);
+    const result = normalizeWorkbookSheets(workbook, normalizeImportedRows, { forceCategory: category });
 
     currentImport = {
       records: result.records,
@@ -308,7 +325,6 @@ async function handleFile(file) {
 }
 
 async function handleRankFile(file) {
-  const category = selectedCategory(rankCategoryInputs);
   currentRankImport = null;
   saveRankButton.disabled = true;
   setRankStatus("");
@@ -328,13 +344,16 @@ async function handleRankFile(file) {
       setRankStatus("这个 Excel 没有可读取的工作表。", "error");
       return;
     }
-    const result = normalizeWorkbookSheets(workbook, normalizeRankRows, category);
+    const result = normalizeWorkbookSheets(workbook, normalizeRankRows);
+    const detectedCategories = categoryCounts(result.records)
+      .filter((item) => item.count > 0)
+      .map((item) => item.label);
 
     currentRankImport = {
       records: result.records,
       meta: {
         fileName: file.name,
-        category,
+        detectedCategories,
         totalRows: result.totalRows,
         skippedRows: result.skippedRows
       }
@@ -344,7 +363,7 @@ async function handleRankFile(file) {
     saveRankButton.disabled = result.records.length === 0;
     setRankStatus(
       result.records.length
-        ? `已按「${category}」读取 ${result.records.length} 条分数位次记录，可以保存到白皮书。`
+        ? `已读取 ${result.records.length} 条分数位次记录，识别到：${detectedCategories.join("、") || "待识别"}，可以保存到白皮书。`
         : "没有读到有效记录，请检查一分一段表表头。",
       result.records.length ? "success" : "error"
     );
@@ -370,17 +389,6 @@ for (const input of programCategoryInputs) {
     setStatus("");
     renderPreview([]);
     renderSummary(summaryNode);
-  });
-}
-
-for (const input of rankCategoryInputs) {
-  input.addEventListener("change", () => {
-    currentRankImport = null;
-    saveRankButton.disabled = true;
-    rankFileInput.value = "";
-    setRankStatus("");
-    renderRankPreview([]);
-    renderSummary(rankSummaryNode);
   });
 }
 
@@ -418,42 +426,32 @@ clearButton.addEventListener("click", () => {
 
 saveRankButton.addEventListener("click", () => {
   if (!currentRankImport?.records.length) return;
-  const category = currentRankImport.meta.category;
   const payload = loadRankPayload();
-  const mergedRecords = mergeCategoryRecords(payload.records, currentRankImport.records, category);
+  const mergedRecords = mergeRecordsByDetectedCategories(payload.records, currentRankImport.records);
   const saved = saveRankTable(mergedRecords, currentRankImport.meta);
   if (!saved) {
     setRankStatus("保存失败，请确认页面可以正常访问后再试。", "error");
     return;
   }
-  setRankStatus(`「${category}」一分一段数据已保存。其他类别数据已保留。`, "success");
+  setRankStatus(`一分一段数据已按表内专业类别保存。其他未覆盖类别已保留。`, "success");
   renderRankStoredState();
 });
 
 clearRankButton.addEventListener("click", () => {
-  const category = selectedCategory(rankCategoryInputs);
-  const payload = loadRankPayload();
-  const remainingRecords = mergeCategoryRecords(payload.records, [], category);
-  if (remainingRecords.length) {
-    saveRankTable(remainingRecords, {
-      fileName: payload.meta?.fileName || "",
-      category,
-      totalRows: remainingRecords.length,
-      skippedRows: 0
-    });
-  } else {
-    clearRankTable();
-  }
+  clearRankTable();
+  currentRankImport = null;
+  saveRankButton.disabled = true;
+  rankFileInput.value = "";
+  renderRankPreview([]);
+  renderSummary(rankSummaryNode);
   renderRankStoredState();
-  setRankStatus(`已清空「${category}」一分一段数据。`, "success");
+  setRankStatus("已清空全部一分一段数据。", "success");
 });
 
 adminLoginForm?.addEventListener("submit", (event) => {
   event.preventDefault();
   if (adminSecretInput.value === ADMIN_SECRET) {
-    sessionStorage.setItem(ADMIN_SESSION_KEY, "true");
-    setLoginError("");
-    showAdmin();
+    unlockAdmin();
     return;
   }
   sessionStorage.removeItem(ADMIN_SESSION_KEY);
@@ -470,8 +468,16 @@ renderSummary(rankSummaryNode);
 renderStoredState();
 renderRankStoredState();
 
-if (sessionStorage.getItem(ADMIN_SESSION_KEY) === "true") {
+const adminSecretFromUrl = getAdminSecretFromUrl();
+if (adminSecretFromUrl === ADMIN_SECRET) {
+  unlockAdmin();
+  sanitizeAdminSecretUrl();
+} else if (sessionStorage.getItem(ADMIN_SESSION_KEY) === "true") {
   showAdmin();
 } else {
+  if (adminSecretFromUrl) {
+    sanitizeAdminSecretUrl();
+    setLoginError("链接密钥不正确，请重新输入。");
+  }
   showLogin();
 }

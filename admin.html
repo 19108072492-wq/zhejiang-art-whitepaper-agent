@@ -60,6 +60,7 @@
               <label><input type="radio" name="programCategory" value="舞蹈">舞蹈</label>
               <label><input type="radio" name="programCategory" value="书法">书法</label>
               <label><input type="radio" name="programCategory" value="表导">表导</label>
+              <label><input type="radio" name="programCategory" value="音乐">音乐</label>
             </fieldset>
             <label class="file-drop">
               <span>选择 Excel 文件</span>
@@ -78,22 +79,14 @@
             <div class="panel-heading">
               <p>上传一分一段表</p>
             </div>
-            <fieldset class="category-picker" aria-label="一分一段上传类别">
-              <legend>上传类别</legend>
-              <label><input type="radio" name="rankCategory" value="美术与设计" checked>美术与设计</label>
-              <label><input type="radio" name="rankCategory" value="播音">播音</label>
-              <label><input type="radio" name="rankCategory" value="舞蹈">舞蹈</label>
-              <label><input type="radio" name="rankCategory" value="书法">书法</label>
-              <label><input type="radio" name="rankCategory" value="表导">表导</label>
-            </fieldset>
             <label class="file-drop">
               <span>选择 Excel 文件</span>
               <input id="rank-file" type="file" accept=".xlsx,.xls">
             </label>
-            <p class="form-note">先选择类别再上传。建议表头包含专业分、位次号；专业成绩按 300 分满分读取。</p>
+            <p class="form-note">一分一段只需上传合并后的总表。系统读取“科类或方向名称”自动归类：美术与设计=美术与设计，播音与主持类=播音，舞蹈类=舞蹈，书法类=书法，戏剧影视表演/服装表演/戏剧影视导演=表导，音乐教育器乐主项/音乐教育声乐主项/音乐表演器乐方向/音乐表演声乐方向=音乐。当前支持表头：科类或方向名称、综合分成绩、人数小计、人数累计。</p>
             <div class="button-row">
-              <button type="button" class="primary-button" id="save-rank" disabled>保存当前类别数据</button>
-              <button type="button" class="ghost-button" id="clear-rank">清空当前类别</button>
+              <button type="button" class="primary-button" id="save-rank" disabled>保存一分一段数据</button>
+              <button type="button" class="ghost-button" id="clear-rank">清空全部一分一段</button>
             </div>
             <p class="status-message" id="rank-status" hidden></p>
             <div class="stored-state" id="rank-stored-state"></div>

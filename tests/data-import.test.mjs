@@ -4,6 +4,7 @@ import {
   detectHeaders,
   detectRankHeaders,
   estimateRankFromScore,
+  mergeRecordsByDetectedCategories,
   normalizeImportedRows,
   normalizeRankRows
 } from "../src/data-import.mjs";
@@ -91,6 +92,61 @@ test("uses sheet name as category hint when program rows omit category", () => {
   assert.equal(result.records[0].artCategory, "播音");
 });
 
+test("normalizes music art category for program and rank data", () => {
+  const programResult = normalizeImportedRows([
+    {
+      "院校名称": "浙江音乐学院",
+      "专业名称": "音乐表演",
+      "综合分": "560",
+      "位次号": "900",
+      "科类方向名称": "音乐类"
+    }
+  ]);
+  const rankResult = normalizeRankRows([
+    {
+      "科类或方向名称": "音乐类",
+      "综合分成绩": "560",
+      "人数累计": "900"
+    }
+  ]);
+
+  assert.equal(programResult.records[0].artCategory, "音乐");
+  assert.equal(rankResult.records[0].artCategory, "音乐");
+});
+
+test("maps official rank direction names to broad art categories", () => {
+  const result = normalizeRankRows([
+    { "科类或方向名称": "美术与设计", "综合分成绩": "560", "人数累计": "100" },
+    { "科类或方向名称": "播音与主持类", "综合分成绩": "560", "人数累计": "200" },
+    { "科类或方向名称": "舞蹈类", "综合分成绩": "560", "人数累计": "300" },
+    { "科类或方向名称": "书法类", "综合分成绩": "560", "人数累计": "400" },
+    { "科类或方向名称": "戏剧影视表演", "综合分成绩": "560", "人数累计": "500" },
+    { "科类或方向名称": "服装表演", "综合分成绩": "560", "人数累计": "600" },
+    { "科类或方向名称": "戏剧影视导演", "综合分成绩": "560", "人数累计": "700" },
+    { "科类或方向名称": "音乐教育器乐主项", "综合分成绩": "560", "人数累计": "800" },
+    { "科类或方向名称": "音乐教育声乐主项", "综合分成绩": "560", "人数累计": "900" },
+    { "科类或方向名称": "音乐表演器乐方向", "综合分成绩": "560", "人数累计": "1000" },
+    { "科类或方向名称": "音乐表演声乐方向", "综合分成绩": "560", "人数累计": "1100" }
+  ]);
+
+  assert.deepEqual(
+    result.records.map((record) => record.artCategory),
+    [
+      "美术与设计",
+      "播音",
+      "舞蹈",
+      "书法",
+      "表导",
+      "表导",
+      "表导",
+      "音乐",
+      "音乐",
+      "音乐",
+      "音乐"
+    ]
+  );
+});
+
 test("normalizes one-score-one-rank rows and estimates professional rank", () => {
   const rankRows = [
     { "艺考类别": "美术与设计", "专业分": "290分", "位次号": "120名" },
@@ -111,7 +167,8 @@ test("normalizes one-score-one-rank rows and estimates professional rank", () =>
   assert.deepEqual(result.records[0], {
     artCategory: "美术与设计",
     score: 290,
-    rank: 120
+    rank: 120,
+    scoreType: "professional"
   });
 
   assert.deepEqual(
@@ -119,7 +176,8 @@ test("normalizes one-score-one-rank rows and estimates professional rank", () =>
     {
       rank: 680,
       matchedScore: 275,
-      exact: false
+      exact: false,
+      scoreType: "professional"
     }
   );
   assert.deepEqual(
@@ -127,7 +185,104 @@ test("normalizes one-score-one-rank rows and estimates professional rank", () =>
     {
       rank: 310,
       matchedScore: 275,
-      exact: true
+      exact: true,
+      scoreType: "professional"
     }
+  );
+});
+
+test("keeps category marks from a combined all-direction rank table", () => {
+  const rankRows = [
+    { "专业": "美术与设计类", "成绩": "276", "累计人数": "680" },
+    { "专业": "舞蹈类", "成绩": "276", "累计人数": "310" },
+    { "专业": "播音主持类", "成绩": "276", "累计人数": "450" }
+  ];
+
+  const headers = detectRankHeaders(rankRows[0]);
+
+  assert.equal(headers.artCategory, "专业");
+  assert.equal(headers.score, "成绩");
+  assert.equal(headers.rank, "累计人数");
+
+  const result = normalizeRankRows(rankRows, {
+    forceCategory: "美术与设计"
+  });
+
+  assert.deepEqual(
+    result.records.map((record) => record.artCategory),
+    ["美术与设计", "舞蹈", "播音"]
+  );
+  assert.deepEqual(
+    estimateRankFromScore(result.records, "舞蹈", 276),
+    {
+      rank: 310,
+      matchedScore: 276,
+      exact: true,
+      scoreType: "professional"
+    }
+  );
+});
+
+test("detects official combined comprehensive score rank headers", () => {
+  const rankRows = [
+    { "科类或方向名称": "美术与设计类", "综合分成绩": "543", "人数小计": "12", "人数累计": "680" },
+    { "科类或方向名称": "舞蹈类", "综合分成绩": "543", "人数小计": "8", "人数累计": "310" }
+  ];
+  const headers = detectRankHeaders(rankRows[0]);
+
+  assert.equal(headers.artCategory, "科类或方向名称");
+  assert.equal(headers.score, "综合分成绩");
+  assert.equal(headers.rank, "人数累计");
+
+  const result = normalizeRankRows(rankRows);
+
+  assert.deepEqual(result.records[0], {
+    artCategory: "美术与设计",
+    score: 543,
+    rank: 680,
+    scoreType: "composite"
+  });
+  assert.deepEqual(
+    estimateRankFromScore(result.records, "美术与设计", 543, { scoreType: "composite" }),
+    {
+      rank: 680,
+      matchedScore: 543,
+      exact: true,
+      scoreType: "composite"
+    }
+  );
+});
+
+test("uses rank fallback category when sheet name is not a known art category", () => {
+  const result = normalizeRankRows([
+    { "专业分": "276", "位次号": "680" }
+  ], {
+    categoryHint: "Sheet1",
+    fallbackCategory: "美术与设计"
+  });
+
+  assert.equal(result.records[0].artCategory, "美术与设计");
+});
+
+test("merges combined rank imports by detected categories", () => {
+  const existingRecords = [
+    { artCategory: "美术与设计", score: 250, rank: 1000 },
+    { artCategory: "舞蹈", score: 250, rank: 500 },
+    { artCategory: "书法", score: 250, rank: 300 }
+  ];
+  const nextRecords = [
+    { artCategory: "美术与设计", score: 276, rank: 680 },
+    { artCategory: "舞蹈", score: 276, rank: 310 }
+  ];
+
+  const merged = mergeRecordsByDetectedCategories(existingRecords, nextRecords, "美术与设计");
+
+  assert.deepEqual(
+    merged.map((record) => `${record.artCategory}:${record.score}:${record.rank}`),
+    [
+      "书法:250:300",
+      "美术与设计:276:680",
+      "舞蹈:276:310"
+    ]
   );
 });

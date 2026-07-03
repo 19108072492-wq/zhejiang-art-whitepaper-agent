@@ -1,5 +1,6 @@
 import {
   ZHEJIANG_ELECTIVE_SUBJECTS,
+  calculateScoreProfile,
   generateWhitepaper,
   normalizePreferenceInput,
   validatePreferences,
@@ -9,12 +10,21 @@ import { estimateRankFromScore } from "./data-import.mjs";
 import { loadProgramPayload, loadRankPayload } from "./data-store.mjs";
 import { samplePrograms } from "./sample-data.mjs";
 import { normalizeArtCategory } from "./categories.mjs";
+import {
+  PARENT_NARRATIVE_FIELDS,
+  buildParentNarrativeFallback,
+  buildParentNarrativePayload,
+  normalizeParentNarratives
+} from "./parent-narrative.mjs";
 
 const form = document.querySelector("#student-form");
 const workspace = document.querySelector(".workspace");
 const reportRoot = document.querySelector("#report");
 const formError = document.querySelector("#form-error");
 const rankEstimateNode = document.querySelector("#rank-estimate");
+const submitButton = form.querySelector('button[type="submit"]');
+const DEFAULT_AGENT_API_PATH = "/api/analyze";
+const NARRATIVE_LOADING_TEXT = "正在生成个性化解读……";
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -34,6 +44,13 @@ function formatScore(value) {
   const number = Number(value);
   if (!Number.isFinite(number)) return "0";
   return Number.isInteger(number) ? String(number) : number.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+}
+
+function getAgentApiUrl() {
+  const configuredUrl = String(window.WHITEPAPER_AGENT_API_URL ?? "").trim();
+  if (configuredUrl) return configuredUrl;
+  if (window.location.hostname.endsWith("github.io")) return "";
+  return DEFAULT_AGENT_API_PATH;
 }
 
 function unique(items) {
@@ -64,16 +81,20 @@ function formatLocation(program) {
   return [program.province, program.city].filter(Boolean).join(" / ") || "待补充";
 }
 
-function getRankEstimate(artCategory, professionalScore) {
+function getRankEstimate(artCategory, professionalScore, compositeScore) {
   const rankPayload = loadRankPayload();
-  return estimateRankFromScore(rankPayload.records, artCategory, professionalScore);
+  return estimateRankFromScore(rankPayload.records, artCategory, compositeScore, {
+    scoreType: "composite",
+    requireScoreType: true
+  }) || estimateRankFromScore(rankPayload.records, artCategory, professionalScore, {
+    scoreType: "professional"
+  });
 }
 
 function readInput() {
   const formData = new FormData(form);
   const artCategory = String(formData.get("artCategory"));
   const professionalScore = numberValue(formData, "professionalScore");
-  const professionalRankEstimate = getRankEstimate(artCategory, professionalScore);
   const preferences = normalizePreferenceInput({
     targetSchools: [
       formData.get("targetSchool1"),
@@ -85,7 +106,7 @@ function readInput() {
       formData.get("city2")
     ]
   });
-  return {
+  const input = {
     artCategory,
     foreignLanguage: String(formData.get("foreignLanguage")),
     chinese: numberValue(formData, "chinese"),
@@ -106,13 +127,18 @@ function readInput() {
       }
     ],
     professionalScore,
-    professionalRank: professionalRankEstimate?.rank ?? 0,
-    professionalRankEstimate,
     targetSchools: preferences.targetSchools,
     preferredCities: preferences.preferredCities,
     acceptOutsideZhejiang: formData.has("acceptOutsideZhejiang"),
     acceptSinoForeign: formData.has("acceptSinoForeign"),
     acceptHighTuition: formData.has("acceptHighTuition")
+  };
+  const scoreProfile = calculateScoreProfile(input);
+  const rankEstimate = getRankEstimate(artCategory, professionalScore, scoreProfile.currentCompositeScore);
+  return {
+    ...input,
+    professionalRank: rankEstimate?.rank ?? 0,
+    professionalRankEstimate: rankEstimate
   };
 }
 
@@ -218,24 +244,24 @@ function renderTargetSchoolOptions(selectedValues = namedSelectValues(["targetSc
 
 function updateRankEstimate() {
   if (!rankEstimateNode) return;
-  const artCategory = form.elements.namedItem("artCategory").value;
   const professionalScore = Number(form.elements.namedItem("professionalScore").value);
-  const rankPayload = loadRankPayload();
 
   if (!professionalScore) {
-    rankEstimateNode.textContent = "专业成绩满分 300 分，系统将根据一分一段表估算专业位次。";
+    rankEstimateNode.textContent = "专业成绩满分 300 分。填写文化课和专业成绩后，系统将根据一分一段表估算位次。";
     rankEstimateNode.classList.add("muted");
     return;
   }
 
-  const estimate = estimateRankFromScore(rankPayload.records, artCategory, professionalScore);
+  const input = readInput();
+  const estimate = input.professionalRankEstimate;
   if (!estimate) {
-    rankEstimateNode.textContent = "已记录专业成绩；暂无可匹配的一分一段位次数据。";
+    rankEstimateNode.textContent = "已记录成绩；暂无可匹配的一分一段位次数据。";
     rankEstimateNode.classList.add("muted");
     return;
   }
 
-  rankEstimateNode.textContent = `按 ${estimate.matchedScore} 分档估算，专业位次约 ${estimate.rank} 名。`;
+  const scoreLabel = estimate.scoreType === "composite" ? "综合分" : "专业分";
+  rankEstimateNode.textContent = `按一分一段表 ${estimate.matchedScore} ${scoreLabel}分档估算，位次约 ${estimate.rank} 名。`;
   rankEstimateNode.classList.remove("muted");
 }
 
@@ -339,7 +365,7 @@ function renderPresentationBrief(brief) {
   return `
     <section class="panel result-section presentation-brief">
       <div class="section-heading">
-        <p>面谈结论与下一步</p>
+        <p>当前分析结论</p>
       </div>
       <div class="presentation-grid">
         ${brief.cards.map((card) => `
@@ -375,20 +401,20 @@ function renderProfessionalPosition(input, profile) {
           <strong>${escapeHtml(formatScore(profile.professionalConvertedScore))}</strong>
         </article>
         <article>
-          <span>估算专业位次</span>
+          <span>${estimate?.scoreType === "composite" ? "估算综合分位次" : "估算专业位次"}</span>
           <strong>${estimate ? escapeHtml(estimate.rank) : "待匹配"}</strong>
         </article>
-        <p>综合分 = 文化总分 × 50% + 专业成绩 × 2.5 × 50%。${estimate ? `按一分一段表 ${estimate.matchedScore} 分档估算。` : "暂未匹配到一分一段位次，报告先按综合分与志愿偏好分析。"}</p>
+        <p>综合分 = 文化总分 × 50% + 专业成绩 × 2.5 × 50%。${estimate ? `按一分一段表 ${estimate.matchedScore} ${estimate.scoreType === "composite" ? "综合分" : "专业分"}分档估算位次。` : "暂未匹配到一分一段位次，报告先按综合分与志愿偏好分析。"}</p>
       </div>
     </section>
   `;
 }
 
-function renderSubjectTable(profile) {
+function renderSubjectTable(profile, narratives) {
   return `
     <section class="panel result-section">
       <div class="section-heading">
-        <p>文化课各科差距</p>
+        <p>学科提分优先级</p>
       </div>
       <div class="subject-list">
         ${profile.subjects.map((subject) => `
@@ -415,6 +441,7 @@ function renderSubjectTable(profile) {
           `).join("")}
         </div>
       </div>
+      ${renderNarrativeBlock("学科提分优先级解释", "subjectPriorityInsight", narratives)}
     </section>
   `;
 }
@@ -455,7 +482,75 @@ function renderPlan(plan) {
   `;
 }
 
-function renderReport(whitepaper, source, input) {
+function renderParentNarrativePlaceholders() {
+  return PARENT_NARRATIVE_FIELDS.reduce((result, field) => {
+    result[field] = NARRATIVE_LOADING_TEXT;
+    return result;
+  }, {});
+}
+
+function renderNarrativeBlock(title, field, narratives, options = {}) {
+  const isLoading = narratives[field] === NARRATIVE_LOADING_TEXT;
+  const tag = options.tag || "article";
+  return `
+    <${tag} class="parent-narrative ${isLoading ? "is-loading" : ""}" data-narrative-field="${escapeHtml(field)}">
+      <span>${escapeHtml(title)}</span>
+      <p>${escapeHtml(narratives[field] || NARRATIVE_LOADING_TEXT)}</p>
+    </${tag}>
+  `;
+}
+
+function updateParentNarratives(narratives) {
+  for (const field of PARENT_NARRATIVE_FIELDS) {
+    const node = reportRoot.querySelector(`[data-narrative-field="${field}"]`);
+    if (!node) continue;
+    const paragraph = node.querySelector("p");
+    if (paragraph) paragraph.textContent = narratives[field] || "";
+    node.classList.remove("is-loading");
+  }
+}
+
+function collectTargetPrograms(whitepaper, targetSchools) {
+  const selected = new Set(targetSchools);
+  if (!selected.size) return [];
+  const tiers = ["bao", "wen", "chong"];
+  return [
+    ...tiers.flatMap((tier) => whitepaper.currentMatches[tier] || []),
+    ...tiers.flatMap((tier) => whitepaper.improvedMatches[tier] || [])
+  ]
+    .filter((program, index, list) =>
+      selected.has(program.school) &&
+      list.findIndex((item) => item.school === program.school && item.program === program.program) === index
+    )
+    .slice(0, 4);
+}
+
+function renderTargetGapSection(whitepaper, input, narratives) {
+  const targetSchools = Array.isArray(input.targetSchools) ? input.targetSchools : [];
+  const targetPrograms = collectTargetPrograms(whitepaper, targetSchools);
+  return `
+    <section class="panel result-section target-gap-section">
+      <div class="section-heading">
+        <p>目标院校差距</p>
+      </div>
+      <div class="target-gap-grid">
+        <div class="target-gap-list">
+          ${targetSchools.length
+            ? targetSchools.map((school) => `<span>${escapeHtml(school)}</span>`).join("")
+            : "<span>暂未填写明确目标院校</span>"}
+        </div>
+        <div class="target-program-list">
+          ${targetPrograms.length
+            ? targetPrograms.map(renderCompactProgram).join("")
+            : renderProgramPlaceholder("暂无可匹配的目标院校样本，建议先按当前成绩区间确定合理目标层次。")}
+        </div>
+      </div>
+      ${renderNarrativeBlock("目标院校差距解读", "targetSchoolInsight", narratives)}
+    </section>
+  `;
+}
+
+function renderReport(whitepaper, source, input, narratives = renderParentNarrativePlaceholders()) {
   form.hidden = true;
   reportRoot.hidden = false;
   workspace.classList.add("has-report", "report-only");
@@ -467,14 +562,28 @@ function renderReport(whitepaper, source, input) {
       <p class="kicker">升学规划白皮书</p>
       <h2>${escapeHtml(whitepaper.summary)}</h2>
       <p class="data-source-note">${escapeHtml(source.note)}</p>
+      ${renderNarrativeBlock("家长版核心解读", "parentSummary", narratives)}
+    </section>
+    <section class="panel result-section">
+      <div class="section-heading">
+        <p>学生类型诊断</p>
+      </div>
+      ${renderNarrativeBlock("学生类型诊断", "studentTypeInsight", narratives, { tag: "div" })}
     </section>
     ${renderScoreCards(whitepaper.scoreProfile)}
     ${renderPresentationBrief(whitepaper.presentationBrief)}
     ${renderProfessionalPosition(input, whitepaper.scoreProfile)}
+    ${renderTargetGapSection(whitepaper, input, narratives)}
     ${renderComparisonHero(whitepaper.comparison)}
-    ${renderSubjectTable(whitepaper.scoreProfile)}
     ${renderTierComparison(whitepaper.currentMatches, whitepaper.improvedMatches, whitepaper.lineInsight)}
+    ${renderSubjectTable(whitepaper.scoreProfile, narratives)}
     ${renderPlan(whitepaper.studyPlan)}
+    <section class="panel result-section">
+      <div class="section-heading">
+        <p>后续规划建议</p>
+      </div>
+      ${renderNarrativeBlock("后续规划建议", "nextStepAdvice", narratives, { tag: "div" })}
+    </section>
   `;
 }
 
@@ -488,6 +597,32 @@ function renderEmpty() {
 function setFormError(message) {
   formError.textContent = message;
   formError.hidden = !message;
+}
+
+function setSubmitLoading(isLoading) {
+  if (!submitButton) return;
+  submitButton.disabled = isLoading;
+  submitButton.textContent = isLoading ? "正在生成完整白皮书..." : "生成规划白皮书";
+}
+
+async function requestParentNarratives(narrativePayload, source) {
+  const agentApiUrl = getAgentApiUrl();
+  if (!agentApiUrl) return null;
+
+  const response = await fetch(agentApiUrl, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      sourceLabel: source.label,
+      narrativePayload
+    })
+  });
+  if (!response.ok) throw new Error("agent unavailable");
+  const payload = await response.json();
+  if (!payload.ok || !payload.narratives) throw new Error(payload.error || "agent failed");
+  return payload.narratives;
 }
 
 function updateElectiveOptions() {
@@ -587,7 +722,7 @@ form.elements.namedItem("professionalScore").addEventListener("input", () => {
   updateRankEstimate();
 });
 
-form.addEventListener("submit", (event) => {
+form.addEventListener("submit", async (event) => {
   event.preventDefault();
   const input = readInput();
   const validationMessage = validateFormInput(input);
@@ -597,9 +732,24 @@ form.addEventListener("submit", (event) => {
   }
   setFormError("");
   const source = getProgramSource(input.artCategory);
-  const whitepaper = generateWhitepaper(input, source.programs);
-  renderReport(whitepaper, source, input);
-  reportRoot.scrollIntoView({ behavior: "smooth", block: "start" });
+  setSubmitLoading(true);
+  try {
+    const whitepaper = generateWhitepaper(input, source.programs);
+    const narrativePayload = buildParentNarrativePayload(input, whitepaper);
+    const fallbackNarratives = buildParentNarrativeFallback(narrativePayload);
+    let normalizedNarratives = fallbackNarratives;
+    try {
+      const agentNarratives = await requestParentNarratives(narrativePayload, source);
+      normalizedNarratives = normalizeParentNarratives(agentNarratives, fallbackNarratives);
+    } catch {
+      normalizedNarratives = fallbackNarratives;
+    }
+
+    renderReport(whitepaper, source, input, normalizedNarratives);
+    reportRoot.scrollIntoView({ behavior: "smooth", block: "start" });
+  } finally {
+    setSubmitLoading(false);
+  }
 });
 
 reportRoot.addEventListener("click", (event) => {

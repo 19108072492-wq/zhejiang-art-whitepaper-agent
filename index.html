@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="./styles.css">
     <script>
       if (window.location.protocol === "file:") {
-        window.location.replace("http://127.0.0.1:8787/index.html");
+        window.location.replace("http://127.0.0.1:8790/index.html");
       }
     </script>
   </head>
@@ -67,6 +67,7 @@
                 <option>舞蹈</option>
                 <option>书法</option>
                 <option>表导</option>
+                <option>音乐</option>
               </select>
             </label>
             <div class="professional-input-row">
@@ -74,7 +75,7 @@
                 专业成绩
                 <input name="professionalScore" type="number" min="0" max="300" required>
               </label>
-              <p class="derived-note" id="rank-estimate">专业成绩满分 300 分，系统将根据一分一段表估算专业位次。</p>
+              <p class="derived-note" id="rank-estimate">专业成绩满分 300 分。系统将计算综合分，并根据一分一段表估算位次。</p>
             </div>
 
             <div class="score-grid">
@@ -261,6 +262,7 @@
       </section>
     </main>
 
+    <script src="./config.js"></script>
     <script type="module" src="./src/app.mjs"></script>
   </body>
 </html>
