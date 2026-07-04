@@ -170,11 +170,16 @@ test("rank display uses composite score instead of professional conversion", asy
 test("front end keeps AI secrets out of browser files", async () => {
   const indexHtml = await readFile(resolve(root, "index.html"), "utf8");
   const appScript = await readFile(resolve(root, "src/app.mjs"), "utf8");
+  const adminScript = await readFile(resolve(root, "src/admin.mjs"), "utf8");
+  const simpleScript = await readFile(resolve(root, "src/simple-app.mjs"), "utf8");
   const configScript = await readFile(resolve(root, "config.js"), "utf8");
-  const browserFiles = [indexHtml, appScript, configScript].join("\n");
+  const browserFiles = [indexHtml, appScript, adminScript, simpleScript, configScript].join("\n");
 
   assert.equal(indexHtml.includes("./config.js"), true);
+  assert.equal(configScript.includes("WHITEPAPER_DATA_API_URL"), true);
   assert.equal(browserFiles.includes("AI_API_KEY"), false);
+  assert.equal(browserFiles.includes("SUPABASE_SERVICE_ROLE_KEY"), false);
+  assert.equal(browserFiles.includes("ffjy123456"), false);
   assert.equal(/sk-[A-Za-z0-9_-]{20,}/.test(browserFiles), false);
 });
 
@@ -217,6 +222,26 @@ test("supabase edge function reads AI key from server secrets", async () => {
   assert.equal(edgeFunction.includes("access-control-allow-origin"), true);
 });
 
+test("supabase data function persists whitepaper datasets with admin secret", async () => {
+  const dataFunction = await readFile(resolve(root, "supabase/functions/data/index.ts"), "utf8");
+  const config = await readFile(resolve(root, "supabase/config.toml"), "utf8");
+
+  for (const token of [
+    "getDatasets",
+    "saveProgramCategory",
+    "saveRankTable",
+    "clearProgramCategory",
+    "clearRankTable",
+    'Deno.env.get("ADMIN_SECRET")',
+    'Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")',
+    "whitepaper_datasets"
+  ]) {
+    assert.equal(dataFunction.includes(token), true);
+  }
+  assert.equal(config.includes("[functions.data]"), true);
+  assert.equal(config.includes("verify_jwt = false"), true);
+});
+
 test("report uses parent-facing planning sections instead of internal interview wording", async () => {
   const appScript = await readFile(resolve(root, "src/app.mjs"), "utf8");
   const styles = await readFile(resolve(root, "styles.css"), "utf8");
@@ -249,6 +274,16 @@ test("agent endpoints only ask for five parent narrative fields", async () => {
   assert.equal(endpointCode.includes("consultantTakeaway"), false);
   assert.equal(endpointCode.includes("parentTalkTrack"), false);
   assert.equal(endpointCode.includes("subjectStrategy"), false);
+});
+
+test("agent prompts constrain AI to uploaded data summary", async () => {
+  const serverScript = await readFile(resolve(root, "server.mjs"), "utf8");
+  const edgeFunction = await readFile(resolve(root, "supabase/functions/analyze/index.ts"), "utf8");
+  const endpointCode = `${serverScript}\n${edgeFunction}`;
+
+  assert.equal(endpointCode.includes("后台上传数据摘要"), true);
+  assert.equal(endpointCode.includes("不得编造院校、专业、分数线、位次号、计划数"), true);
+  assert.equal(endpointCode.includes("dataContext"), true);
 });
 
 test("agent endpoints support simple short narrative mode", async () => {

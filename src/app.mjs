@@ -7,7 +7,12 @@ import {
   validateElectiveSubjects
 } from "./analysis.mjs";
 import { estimateRankFromScore } from "./data-import.mjs";
-import { loadProgramPayload, loadRankPayload } from "./data-store.mjs";
+import {
+  buildDataContext,
+  hydrateRemoteData,
+  loadProgramPayload,
+  loadRankPayload
+} from "./data-store.mjs";
 import { samplePrograms } from "./sample-data.mjs";
 import { normalizeArtCategory } from "./categories.mjs";
 import {
@@ -774,19 +779,28 @@ for (const name of ["professionalScore", "chinese", "math", "english", "elective
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (isGenerating) return;
-  const input = readInput();
-  const validationMessage = validateFormInput(input);
+  const preliminaryInput = readInput();
+  const validationMessage = validateFormInput(preliminaryInput);
   if (validationMessage) {
     setFormError(validationMessage);
     return;
   }
   setFormError("");
-  const source = getProgramSource(input.artCategory);
   isGenerating = true;
   setSubmitLoading(true);
   try {
+    await hydrateRemoteData();
+    const input = readInput();
+    const source = getProgramSource(input.artCategory);
     const whitepaper = generateWhitepaper(input, source.programs);
-    const narrativePayload = buildParentNarrativePayload(input, whitepaper);
+    const dataContext = buildDataContext({
+      sourceLabel: source.label,
+      artCategory: input.artCategory,
+      programPayload: loadProgramPayload(),
+      rankPayload: loadRankPayload(),
+      rankEstimate: input.compositeRankEstimate
+    });
+    const narrativePayload = buildParentNarrativePayload(input, whitepaper, dataContext);
     const fallbackNarratives = buildParentNarrativeFallback(narrativePayload);
     let normalizedNarratives = fallbackNarratives;
     try {
@@ -815,3 +829,8 @@ updateElectiveOptions();
 renderTargetSchoolOptions([]);
 updateRankEstimate();
 renderEmpty();
+
+hydrateRemoteData().then(() => {
+  renderTargetSchoolOptions();
+  updateRankEstimate();
+});

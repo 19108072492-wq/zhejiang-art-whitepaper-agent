@@ -4,7 +4,12 @@ import {
   buildSimpleReport,
   normalizeSimpleNarratives
 } from "./simple-core.mjs";
-import { loadProgramPayload, loadRankPayload } from "./data-store.mjs";
+import {
+  buildDataContext,
+  hydrateRemoteData,
+  loadProgramPayload,
+  loadRankPayload
+} from "./data-store.mjs";
 import { samplePrograms } from "./sample-data.mjs";
 import { normalizeArtCategory } from "./categories.mjs";
 
@@ -304,12 +309,12 @@ function renderReport(report, narratives, source) {
   reportRoot.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-async function requestSimpleNarratives(report, source) {
+async function requestSimpleNarratives(report, source, dataContext) {
   const fallback = buildSimpleNarrativeFallback(report);
   const agentApiUrl = getAgentApiUrl();
   if (!agentApiUrl) return fallback;
   const requestBody = {
-    ...buildSimpleAgentRequest(report, source.label),
+    ...buildSimpleAgentRequest(report, source.label, dataContext),
     mode: "simple"
   };
 
@@ -339,10 +344,18 @@ form.addEventListener("submit", async (event) => {
   isGenerating = true;
   setLoading(true);
   try {
+    await hydrateRemoteData();
     const source = getProgramSource(input.artCategory);
     const rankPayload = loadRankPayload();
     const report = buildSimpleReport(input, source.programs, rankPayload.records);
-    const narratives = await requestSimpleNarratives(report, source);
+    const dataContext = buildDataContext({
+      sourceLabel: source.label,
+      artCategory: input.artCategory,
+      programPayload: loadProgramPayload(),
+      rankPayload,
+      rankEstimate: report.rankEstimate
+    });
+    const narratives = await requestSimpleNarratives(report, source, dataContext);
     renderReport(report, narratives, source);
   } finally {
     isGenerating = false;
@@ -358,3 +371,5 @@ reportRoot.addEventListener("click", (event) => {
   reportRoot.replaceChildren();
   form.scrollIntoView({ behavior: "smooth", block: "start" });
 });
+
+hydrateRemoteData();

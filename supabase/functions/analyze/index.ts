@@ -53,27 +53,29 @@ const parentNarrativeSystemPrompt = [
   "你是一名浙江艺考生升学规划白皮书撰写助手。",
   "你的任务不是计算分数，也不是匹配院校，而是基于系统已经计算好的结构化数据，为家长生成简洁、专业、温和、可读的文字解读。",
   "严格要求：",
-  "1. 只能解释输入数据，不得编造院校、专业、分数线、位次号、计划数。",
-  "2. 不要使用销售话术。",
-  "3. 不要出现“顾问、成交、邀约、到访、加微信、话术、转化、客户意向”等内部词。",
-  "4. 所有内容必须是家长现场可以直接阅读的正式报告语言。",
-  "5. 语气要专业、客观、温和，不制造焦虑，不做录取承诺。",
-  "6. 不能说“保证录取”“一定能上”“肯定能提分”。",
-  "7. 输出必须是严格 JSON，不要 Markdown，不要解释过程。",
-  "8. 每个字段控制在要求字数内。"
+  "1. 必须优先使用 payload.dataContext 这份后台上传数据摘要，以及系统已经计算好的院校、分数、位次、差距和样本。",
+  "2. 只能解释输入数据，不得编造院校、专业、分数线、位次号、计划数。",
+  "3. 不要使用销售话术。",
+  "4. 不要出现“顾问、成交、邀约、到访、加微信、话术、转化、客户意向”等内部词。",
+  "5. 所有内容必须是家长现场可以直接阅读的正式报告语言。",
+  "6. 语气要专业、客观、温和，不制造焦虑，不做录取承诺。",
+  "7. 不能说“保证录取”“一定能上”“肯定能提分”。",
+  "8. 输出必须是严格 JSON，不要 Markdown，不要解释过程。",
+  "9. 每个字段控制在要求字数内。"
 ].join("\n");
 
 const simpleNarrativeSystemPrompt = [
   "你是一名浙江艺考升学快测助手。",
   "你的任务是基于系统已计算好的数据，为家长生成极短、专业、可直接阅读的快测解读。",
   "严格要求：",
-  "1. 只能解释输入数据，不得编造院校、专业、分数线、位次号、计划数。",
-  "2. 输出必须是严格 JSON，不要 Markdown，不要解释过程。",
-  "3. 只输出 headline、advisorHook、nextStep 三个字段。",
-  "4. headline 控制在 24 字以内；advisorHook 控制在 32 字以内；nextStep 控制在 36 字以内。",
-  "5. 不要写完整学习规划，不要给长篇建议，不要承诺录取结果。",
-  "6. 不要出现顾问、话术、邀约、成交、客户、转化等内部服务词。",
-  "7. 每个字段必须引用至少一个具体数据、位次、差距、院校样本或下一步动作。"
+  "1. 必须优先使用 simplePayload.dataContext 这份后台上传数据摘要，以及系统已经计算好的院校、分数、位次、差距和样本。",
+  "2. 只能解释输入数据，不得编造院校、专业、分数线、位次号、计划数。",
+  "3. 输出必须是严格 JSON，不要 Markdown，不要解释过程。",
+  "4. 只输出 headline、advisorHook、nextStep 三个字段。",
+  "5. headline 控制在 24 字以内；advisorHook 控制在 32 字以内；nextStep 控制在 36 字以内。",
+  "6. 不要写完整学习规划，不要给长篇建议，不要承诺录取结果。",
+  "7. 不要出现顾问、话术、邀约、成交、客户、转化等内部服务词。",
+  "8. 每个字段必须引用至少一个具体数据、位次、差距、院校样本或下一步动作。"
 ].join("\n");
 
 function jsonResponse(status: number, payload: JsonObject) {
@@ -171,7 +173,7 @@ function buildSimpleNarrativePrompt(simplePayload: JsonObject, sourceLabel: stri
     "- advisorHook：家长可直接阅读的补充判断，32字以内，必须包含位次、院校样本或层次判断",
     "- nextStep：下一步建议，36字以内，必须包含一个具体动作",
     "",
-    "注意：不要输出完整学习规划，不要长篇叙述，不要录取承诺，不要出现内部服务词。优先使用 simplePayload 中的 keyTakeaways、currentSamples、unlockedSchools 和 nextCheckpoints。",
+    "注意：不要输出完整学习规划，不要长篇叙述，不要录取承诺，不要出现内部服务词。优先使用 simplePayload.dataContext 这份后台上传数据摘要，以及 simplePayload 中的 keyTakeaways、currentSamples、unlockedSchools 和 nextCheckpoints。",
     "",
     `数据来源：${sourceLabel}`,
     `结构化数据如下：${JSON.stringify(simplePayload)}`
@@ -219,6 +221,8 @@ function buildParentNarrativePrompt(narrativePayload: JsonObject, sourceLabel: s
     "- targetSchoolInsight：目标院校差距解读，120-180字",
     "- subjectPriorityInsight：学科提分优先级解释，120-180字",
     "- nextStepAdvice：后续规划建议，100-150字",
+    "",
+    "payload.dataContext 是后台上传数据摘要。若 dataContext.dataSource 为“参考数据”，只能按参考样本表述；若为“正式数据”，也只能引用 payload 中已经出现的院校、分数和位次摘要。",
     "",
     `结构化数据如下：${JSON.stringify(payload)}`
   ].join("\n");

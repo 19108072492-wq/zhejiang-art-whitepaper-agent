@@ -101,10 +101,22 @@ const forbiddenReportWords = [
 
 test("builds a compact parent narrative payload from rule results only", () => {
   const whitepaper = generateWhitepaper(input, programs);
-  const payload = buildParentNarrativePayload(input, whitepaper);
+  const dataContext = {
+    dataSource: "正式数据",
+    usesUploadedPrograms: true,
+    usesUploadedRankTable: true,
+    programRecordCount: 4,
+    rankRecordCount: 300,
+    categoryProgramCount: 4,
+    categoryRankCount: 60,
+    rankMatchedScore: 543,
+    estimatedRank: 1200
+  };
+  const payload = buildParentNarrativePayload(input, whitepaper, dataContext);
 
   assert.deepEqual(Object.keys(payload).sort(), [
     "comparisonSummary",
+    "dataContext",
     "lineInsight",
     "preferences",
     "student",
@@ -112,6 +124,7 @@ test("builds a compact parent narrative payload from rule results only", () => {
     "targets"
   ]);
   assert.equal(payload.student.currentCompositeScore, 543);
+  assert.deepEqual(payload.dataContext, dataContext);
   assert.equal(payload.student.targetCompositeScore, 550);
   assert.equal(payload.student.compositeGap, 7);
   assert.equal(payload.student.estimatedCompositeRank, 1200);
@@ -122,6 +135,8 @@ test("builds a compact parent narrative payload from rule results only", () => {
   assert.equal(payload.studyPlan, undefined);
   assert.equal(payload.scoreProfile, undefined);
   assert.equal(payload.currentMatches, undefined);
+  assert.equal("programs" in payload, false);
+  assert.equal("rankRecords" in payload, false);
 });
 
 test("normalizes agent narratives to five parent-facing fields with fallback fill", () => {

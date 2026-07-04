@@ -509,7 +509,7 @@ export function normalizeSimpleNarratives(narratives, fallback) {
   }, {});
 }
 
-export function buildSimpleAgentRequest(report, sourceLabel = "参考数据") {
+export function buildSimpleAgentRequest(report, sourceLabel = "参考数据", dataContext = {}) {
   return {
     mode: "simple",
     sourceLabel,
@@ -522,6 +522,7 @@ export function buildSimpleAgentRequest(report, sourceLabel = "参考数据") {
       cultureTotal: report.scoreProfile.cultureTotal,
       professionalScore: report.scoreProfile.professionalScore,
       estimatedRank: report.rankEstimate?.rank ?? 0,
+      dataContext,
       context: report.context,
       keyTakeaways: report.keyTakeaways,
       positionSignals: report.positionSignals,

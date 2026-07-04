@@ -136,7 +136,7 @@ function summarizeSubjects(scoreProfile) {
   };
 }
 
-export function buildParentNarrativePayload(input, whitepaper) {
+export function buildParentNarrativePayload(input, whitepaper, dataContext = {}) {
   const scoreProfile = whitepaper.scoreProfile || {};
   const selectedSchools = toArray(input.targetSchools).slice(0, 3);
   const preferredCities = toArray(input.preferredCities).slice(0, 2);
@@ -165,6 +165,7 @@ export function buildParentNarrativePayload(input, whitepaper) {
       acceptHighTuition: Boolean(input.acceptHighTuition),
       acceptCooperation: Boolean(input.acceptSinoForeign)
     },
+    dataContext,
     lineInsight: whitepaper.lineInsight || null,
     comparisonSummary: {
       currentTop: pickProgram(comparison.currentTop),

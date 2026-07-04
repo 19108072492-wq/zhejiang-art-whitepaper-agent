@@ -163,16 +163,30 @@ test("builds simple AI request with only three short narrative fields", () => {
     programs,
     rankRecords
   );
-  const request = buildSimpleAgentRequest(report, "参考数据");
+  const dataContext = {
+    dataSource: "正式数据",
+    usesUploadedPrograms: true,
+    usesUploadedRankTable: true,
+    programRecordCount: 4,
+    rankRecordCount: 2,
+    categoryProgramCount: 4,
+    categoryRankCount: 2,
+    rankMatchedScore: 525,
+    estimatedRank: 2100
+  };
+  const request = buildSimpleAgentRequest(report, "正式数据", dataContext);
 
   assert.equal(request.mode, "simple");
-  assert.equal(request.sourceLabel, "参考数据");
+  assert.equal(request.sourceLabel, "正式数据");
   assert.deepEqual(request.expectedFields, ["headline", "advisorHook", "nextStep"]);
+  assert.deepEqual(request.simplePayload.dataContext, dataContext);
   assert.equal(request.simplePayload.context.studentStage, "高三下学期");
   assert.equal(request.simplePayload.keyTakeaways.length, 3);
   assert.equal(request.simplePayload.nextCheckpoints.length, 3);
   assert.equal("parentSummary" in request.simplePayload, false);
   assert.equal("studyPlan" in request.simplePayload, false);
+  assert.equal("programs" in request.simplePayload, false);
+  assert.equal("rankRecords" in request.simplePayload, false);
 });
 
 test("simple narratives stay short and remove internal wording", () => {

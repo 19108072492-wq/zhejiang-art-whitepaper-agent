@@ -1,16 +1,17 @@
-import { mergeRecordsByDetectedCategories, normalizeImportedRows, normalizeRankRows } from "./data-import.mjs";
+import { normalizeImportedRows, normalizeRankRows } from "./data-import.mjs";
 import {
-  clearPrograms,
-  clearRankTable,
+  clearProgramCategoryRemote,
+  clearRankTableRemote,
+  hydrateRemoteData,
   loadProgramPayload,
   loadRankPayload,
-  savePrograms,
-  saveRankTable
+  saveProgramCategoryRemote,
+  saveRankTableRemote,
+  validateAdminSecretRemote
 } from "./data-store.mjs";
 import { ART_CATEGORIES, normalizeArtCategory } from "./categories.mjs";
 
-const ADMIN_SECRET = "ffjy123456";
-const ADMIN_SESSION_KEY = "ffjy-admin-unlocked";
+const ADMIN_SESSION_KEY = "ffjy-admin-secret";
 const adminLogin = document.querySelector("#admin-login");
 const adminApp = document.querySelector("#admin-app");
 const adminLoginForm = document.querySelector("#admin-login-form");
@@ -61,10 +62,14 @@ function sanitizeAdminSecretUrl() {
   window.history.replaceState({}, document.title, nextUrl);
 }
 
-function unlockAdmin() {
-  sessionStorage.setItem(ADMIN_SESSION_KEY, "true");
+function unlockAdmin(adminSecret) {
+  sessionStorage.setItem(ADMIN_SESSION_KEY, adminSecret);
   setLoginError("");
   showAdmin();
+}
+
+function storedAdminSecret() {
+  return sessionStorage.getItem(ADMIN_SESSION_KEY) || "";
 }
 
 function getAdminSecretFromUrl() {
@@ -78,6 +83,12 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function messageFromError(error, fallback = "操作失败，请稍后重试。") {
+  if (error instanceof Error && error.message) return error.message;
+  const message = String(error ?? "").trim();
+  return message || fallback;
 }
 
 function formatTime(value) {
@@ -130,18 +141,6 @@ function renderCategoryCounts(records) {
       `).join("")}
     </div>
   `;
-}
-
-function mergeCategoryRecords(existingRecords, nextRecords, category) {
-  const normalizedCategory = normalizeArtCategory(category);
-  const keptRecords = (Array.isArray(existingRecords) ? existingRecords : [])
-    .filter((record) => normalizeArtCategory(record.artCategory) !== normalizedCategory);
-  const scopedNextRecords = (Array.isArray(nextRecords) ? nextRecords : [])
-    .map((record) => ({
-      ...record,
-      artCategory: normalizedCategory
-    }));
-  return [...keptRecords, ...scopedNextRecords];
 }
 
 function renderSummary(node, result = { totalRows: 0, records: [], skippedRows: 0 }) {
@@ -392,70 +391,121 @@ for (const input of programCategoryInputs) {
   });
 }
 
-saveButton.addEventListener("click", () => {
+saveButton.addEventListener("click", async () => {
   if (!currentImport?.records.length) return;
   const category = currentImport.meta.category;
-  const payload = loadProgramPayload();
-  const mergedRecords = mergeCategoryRecords(payload.records, currentImport.records, category);
-  const saved = savePrograms(mergedRecords, currentImport.meta);
-  if (!saved) {
-    setStatus("保存失败，请确认页面可以正常访问后再试。", "error");
+  const adminSecret = storedAdminSecret();
+  if (!adminSecret) {
+    setStatus("请先输入后台密钥。", "error");
     return;
   }
-  setStatus(`「${category}」院校专业数据已保存。其他类别数据已保留。`, "success");
-  renderStoredState();
-});
-
-clearButton.addEventListener("click", () => {
-  const category = selectedCategory(programCategoryInputs);
-  const payload = loadProgramPayload();
-  const remainingRecords = mergeCategoryRecords(payload.records, [], category);
-  if (remainingRecords.length) {
-    savePrograms(remainingRecords, {
-      fileName: payload.meta?.fileName || "",
+  saveButton.disabled = true;
+  try {
+    await saveProgramCategoryRemote({
       category,
-      totalRows: remainingRecords.length,
-      skippedRows: 0
+      records: currentImport.records,
+      meta: currentImport.meta,
+      adminSecret
     });
-  } else {
-    clearPrograms();
+    setStatus(`「${category}」院校专业数据已保存到后台。其他类别数据已保留。`, "success");
+    renderStoredState();
+  } catch (error) {
+    setStatus(messageFromError(error, "保存失败，请检查数据接口。"), "error");
+  } finally {
+    saveButton.disabled = false;
   }
-  renderStoredState();
-  setStatus(`已清空「${category}」院校专业数据。`, "success");
 });
 
-saveRankButton.addEventListener("click", () => {
+clearButton.addEventListener("click", async () => {
+  const category = selectedCategory(programCategoryInputs);
+  const adminSecret = storedAdminSecret();
+  if (!adminSecret) {
+    setStatus("请先输入后台密钥。", "error");
+    return;
+  }
+  clearButton.disabled = true;
+  try {
+    await clearProgramCategoryRemote({ category, adminSecret });
+    renderStoredState();
+    setStatus(`已清空「${category}」院校专业数据。`, "success");
+  } catch (error) {
+    setStatus(messageFromError(error, "清空失败，请检查数据接口。"), "error");
+  } finally {
+    clearButton.disabled = false;
+  }
+});
+
+saveRankButton.addEventListener("click", async () => {
   if (!currentRankImport?.records.length) return;
-  const payload = loadRankPayload();
-  const mergedRecords = mergeRecordsByDetectedCategories(payload.records, currentRankImport.records);
-  const saved = saveRankTable(mergedRecords, currentRankImport.meta);
-  if (!saved) {
-    setRankStatus("保存失败，请确认页面可以正常访问后再试。", "error");
+  const adminSecret = storedAdminSecret();
+  if (!adminSecret) {
+    setRankStatus("请先输入后台密钥。", "error");
     return;
   }
-  setRankStatus(`一分一段数据已按表内专业类别保存。其他未覆盖类别已保留。`, "success");
-  renderRankStoredState();
-});
-
-clearRankButton.addEventListener("click", () => {
-  clearRankTable();
-  currentRankImport = null;
   saveRankButton.disabled = true;
-  rankFileInput.value = "";
-  renderRankPreview([]);
-  renderSummary(rankSummaryNode);
-  renderRankStoredState();
-  setRankStatus("已清空全部一分一段数据。", "success");
+  try {
+    await saveRankTableRemote({
+      records: currentRankImport.records,
+      meta: currentRankImport.meta,
+      adminSecret
+    });
+    setRankStatus("一分一段数据已按表内专业类别保存到后台。其他未覆盖类别已保留。", "success");
+    renderRankStoredState();
+  } catch (error) {
+    setRankStatus(messageFromError(error, "保存失败，请检查数据接口。"), "error");
+  } finally {
+    saveRankButton.disabled = false;
+  }
 });
 
-adminLoginForm?.addEventListener("submit", (event) => {
-  event.preventDefault();
-  if (adminSecretInput.value === ADMIN_SECRET) {
-    unlockAdmin();
+clearRankButton.addEventListener("click", async () => {
+  const adminSecret = storedAdminSecret();
+  if (!adminSecret) {
+    setRankStatus("请先输入后台密钥。", "error");
     return;
   }
-  sessionStorage.removeItem(ADMIN_SESSION_KEY);
-  setLoginError("密钥不正确，请重新输入。");
+  clearRankButton.disabled = true;
+  try {
+    await clearRankTableRemote({ adminSecret });
+    currentRankImport = null;
+    saveRankButton.disabled = true;
+    rankFileInput.value = "";
+    renderRankPreview([]);
+    renderSummary(rankSummaryNode);
+    renderRankStoredState();
+    setRankStatus("已清空全部一分一段数据。", "success");
+  } catch (error) {
+    setRankStatus(messageFromError(error, "清空失败，请检查数据接口。"), "error");
+  } finally {
+    clearRankButton.disabled = false;
+  }
+});
+
+async function refreshRemoteState() {
+  await hydrateRemoteData({ force: true });
+  renderStoredState();
+  renderRankStoredState();
+}
+
+async function attemptLogin(adminSecret) {
+  if (!adminSecret) {
+    setLoginError("请输入后台密钥。");
+    return;
+  }
+  try {
+    await validateAdminSecretRemote(adminSecret);
+    unlockAdmin(adminSecret);
+    await refreshRemoteState();
+  } catch (error) {
+    sessionStorage.removeItem(ADMIN_SESSION_KEY);
+    showLogin();
+    setLoginError(messageFromError(error, "密钥校验失败，请重新输入。"));
+  }
+}
+
+adminLoginForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  await attemptLogin(adminSecretInput.value.trim());
 });
 
 adminLogoutButton?.addEventListener("click", () => {
@@ -469,15 +519,17 @@ renderStoredState();
 renderRankStoredState();
 
 const adminSecretFromUrl = getAdminSecretFromUrl();
-if (adminSecretFromUrl === ADMIN_SECRET) {
-  unlockAdmin();
-  sanitizeAdminSecretUrl();
-} else if (sessionStorage.getItem(ADMIN_SESSION_KEY) === "true") {
-  showAdmin();
+const adminSecretFromSession = storedAdminSecret();
+
+if (adminSecretFromUrl) {
+  attemptLogin(adminSecretFromUrl).finally(sanitizeAdminSecretUrl);
+} else if (adminSecretFromSession) {
+  attemptLogin(adminSecretFromSession);
 } else {
-  if (adminSecretFromUrl) {
-    sanitizeAdminSecretUrl();
-    setLoginError("链接密钥不正确，请重新输入。");
-  }
   showLogin();
 }
+
+hydrateRemoteData().then(() => {
+  renderStoredState();
+  renderRankStoredState();
+});
