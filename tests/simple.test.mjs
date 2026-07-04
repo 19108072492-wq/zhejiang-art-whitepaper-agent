@@ -115,6 +115,8 @@ test("simple report includes compact parent-facing briefing blocks", () => {
   assert.equal(report.contextCards.length, 4);
   assert.equal(typeof report.studentInterpretation.title, "string");
   assert.match(report.studentInterpretation.body, /孩子|当前综合分|专业|文化/);
+  assert.equal(report.studentInterpretation.points.length, 3);
+  assert.match(report.studentInterpretation.points.map((item) => item.body).join(""), /文化|专业|位次|目标|稳定/);
   assert.equal(report.keyTakeaways.length, 3);
   assert.ok(report.positionSignals.length >= 3);
   assert.equal(report.liftLevers.length, 3);
@@ -187,7 +189,7 @@ test("builds simple AI request with focused parent-facing interpretation fields"
     "stageGoalInsight",
     "scoreInsight",
     "gapReason",
-    "schoolOpportunity",
+    "schoolTierInsight",
     "nextStep"
   ]);
   assert.deepEqual(request.simplePayload.dataContext, dataContext);
@@ -198,6 +200,7 @@ test("builds simple AI request with focused parent-facing interpretation fields"
   assert.match(request.simplePayload.contextAnalysis.stageGoalInsight, /高二|公办|省内/);
   assert.equal(request.simplePayload.keyTakeaways.length, 3);
   assert.equal(typeof request.simplePayload.studentInterpretation.title, "string");
+  assert.equal(request.simplePayload.studentInterpretation.points.length, 3);
   assert.equal(typeof request.simplePayload.lowestSample.school, "string");
   assert.equal(request.simplePayload.nextCheckpoints.length, 3);
   assert.equal("parentSummary" in request.simplePayload, false);
@@ -222,7 +225,7 @@ test("simple narratives add useful focused interpretation and remove internal wo
     stageGoalInsight: "高二家庭如果想冲公办本科，当前应先把省内样本和文化波动看清。",
     scoreInsight: "AI建议顾问现场重点讲位次约2100名和冲稳保院校梯度",
     gapReason: "孩子差距主要来自文化总分，建议用近三次成绩判断稳定性。",
-    schoolOpportunity: "提分后可以结合冲刺大学、提分后大学等样本看层次变化。",
+    schoolTierInsight: "提分后可以结合冲刺大学、提分后大学等样本看层次变化。",
     nextStep: "邀约客户补充近三次成绩并加微信继续沟通"
   }, fallback);
 
@@ -230,12 +233,32 @@ test("simple narratives add useful focused interpretation and remove internal wo
   assert.ok(narratives.stageGoalInsight.length <= 64);
   assert.ok(narratives.scoreInsight.length <= 58);
   assert.ok(narratives.gapReason.length <= 58);
-  assert.ok(narratives.schoolOpportunity.length <= 58);
+  assert.ok(narratives.schoolTierInsight.length <= 58);
   assert.ok(narratives.nextStep.length <= 48);
   assert.match(narratives.stageGoalInsight, /高二|高三|复读|目标|公办|本科|省重点|保本科/);
   assert.match(narratives.gapReason, /文化|专业|差距|稳定/);
-  assert.match(narratives.schoolOpportunity, /院校|样本|层次|提分|冲|稳|保/);
+  assert.match(narratives.schoolTierInsight, /院校|样本|层次|提分|冲|稳|保/);
   assert.equal(/AI|顾问|现场|邀约|客户|加微信|话术/.test(Object.values(narratives).join("")), false);
+});
+
+test("simple wording avoids internal attraction labels for parent report", () => {
+  const report = buildSimpleReport(
+    {
+      artCategory: "美术与设计",
+      cultureTotal: 450,
+      professionalScore: 240
+    },
+    programs,
+    rankRecords
+  );
+  const narratives = normalizeSimpleNarratives({
+    schoolOpportunity: "院校吸引点不应该展示给家长",
+    schoolTierInsight: "当前先按冲稳保层次看样本，不做录取承诺。"
+  }, buildSimpleNarrativeFallback(report));
+
+  assert.equal("schoolOpportunity" in narratives, false);
+  assert.equal(narratives.schoolTierInsight, "当前先按冲稳保层次看样本，不做录取承诺。");
+  assert.equal(JSON.stringify(report).includes("院校吸引点"), false);
 });
 
 test("simple fallback analysis changes by student stage and planning goal", () => {

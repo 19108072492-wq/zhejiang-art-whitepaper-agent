@@ -356,7 +356,7 @@ export function buildReportRecordPayload({
       stageGoalInsight: cleanText(narratives.stageGoalInsight, 90),
       scoreInsight: cleanText(narratives.scoreInsight, 90),
       gapReason: cleanText(narratives.gapReason, 90),
-      schoolOpportunity: cleanText(narratives.schoolOpportunity, 90),
+      schoolTierInsight: cleanText(narratives.schoolTierInsight, 90),
       nextStep: cleanText(narratives.nextStep, 80)
     },
     report: {
@@ -365,7 +365,8 @@ export function buildReportRecordPayload({
       keyTakeaways: compactList(report.keyTakeaways, compactInsight, 3),
       studentInterpretation: {
         title: cleanText(report.studentInterpretation?.title, 60),
-        body: cleanText(report.studentInterpretation?.body, 180)
+        body: cleanText(report.studentInterpretation?.body, 180),
+        points: compactList(report.studentInterpretation?.points, compactInsight, 3)
       },
       scoreStructure: compactList(report.scoreStructure, compactInsight, 4),
       nextCheckpoints: compactList(report.nextCheckpoints, compactInsight, 3),

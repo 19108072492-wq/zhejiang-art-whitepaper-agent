@@ -195,6 +195,15 @@ function renderChecklist(items) {
   return items.map((item) => `<span>${escapeHtml(item)}</span>`).join("");
 }
 
+function renderStudentPoints(points = []) {
+  return points.map((item) => `
+    <article>
+      <strong>${escapeHtml(item.title)}</strong>
+      <span>${escapeHtml(item.body)}</span>
+    </article>
+  `).join("");
+}
+
 function renderAnalysisReport(narratives) {
   const cards = [
     {
@@ -210,8 +219,8 @@ function renderAnalysisReport(narratives) {
       body: narratives.gapReason
     },
     {
-      title: "院校吸引点",
-      body: narratives.schoolOpportunity
+      title: "院校层次判断",
+      body: narratives.schoolTierInsight
     },
     {
       title: "下一步动作",
@@ -286,6 +295,9 @@ function renderReport(report, narratives, source, input) {
         <strong>${escapeHtml(report.studentInterpretation.title)}</strong>
       </div>
       <p>${escapeHtml(report.studentInterpretation.body)}</p>
+      <div class="simple-student-points">
+        ${renderStudentPoints(report.studentInterpretation.points)}
+      </div>
     </section>
 
     <section class="simple-card simple-score-strip">

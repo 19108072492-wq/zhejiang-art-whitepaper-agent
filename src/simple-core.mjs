@@ -7,13 +7,13 @@ const ABOVE_TARGET_SIMPLE_LIFT = 8;
 const CULTURE_WEIGHT = 0.5;
 const PROFESSIONAL_CONVERSION_RATE = 2.5;
 const PROFESSIONAL_WEIGHT = 0.5;
-const SIMPLE_FIELDS = ["headline", "stageGoalInsight", "scoreInsight", "gapReason", "schoolOpportunity", "nextStep"];
+const SIMPLE_FIELDS = ["headline", "stageGoalInsight", "scoreInsight", "gapReason", "schoolTierInsight", "nextStep"];
 const SIMPLE_FIELD_LIMITS = {
   headline: 30,
   stageGoalInsight: 64,
   scoreInsight: 58,
   gapReason: 58,
-  schoolOpportunity: 58,
+  schoolTierInsight: 58,
   nextStep: 48
 };
 const SIMPLE_WORD_REPLACEMENTS = [
@@ -269,6 +269,7 @@ function buildSimpleNextCheckpoints(report) {
 
 function buildSimpleStudentInterpretation(report) {
   const profile = report.scoreProfile;
+  const points = buildSimpleStudentPoints(report);
   const gapText = profile.compositeGap > 0
     ? `距离目标综合分还差 ${formatScore(profile.compositeGap)} 分`
     : "当前已超过默认目标综合分";
@@ -277,31 +278,66 @@ function buildSimpleStudentInterpretation(report) {
   if (profile.currentCompositeScore >= 550) {
     return {
       title: "已进入较稳窗口",
-      body: `孩子当前综合分 ${formatScore(profile.currentCompositeScore)}${rankText}，${gapText}。这类情况重点不是盲目加码，而是确认成绩稳定性，再看能否打开更高层次样本。`
+      body: `孩子当前综合分 ${formatScore(profile.currentCompositeScore)}${rankText}，${gapText}。这类情况重点不是盲目加码，而是确认成绩稳定性，再看能否打开更高层次样本。`,
+      points
     };
   }
   if (profile.professionalScore >= 250 && profile.cultureTotal < 470) {
     return {
       title: "专业有支撑，文化决定上限",
-      body: `孩子专业成绩 ${formatScore(profile.professionalScore)} 分，对综合分有一定支撑；当前综合分 ${formatScore(profile.currentCompositeScore)}，${gapText}。下一步要优先看文化总分能否稳定拉动。`
+      body: `孩子专业成绩 ${formatScore(profile.professionalScore)} 分，对综合分有一定支撑；当前综合分 ${formatScore(profile.currentCompositeScore)}，${gapText}。下一步要优先看文化总分能否稳定拉动。`,
+      points
     };
   }
   if (profile.professionalScore < 230 && profile.cultureTotal >= 500) {
     return {
       title: "文化有基础，专业需要稳住",
-      body: `孩子文化总分 ${formatScore(profile.cultureTotal)} 分具备一定基础，但专业成绩 ${formatScore(profile.professionalScore)} 分会影响综合分效率。后续要同时复核专业小分线和当前院校梯度。`
+      body: `孩子文化总分 ${formatScore(profile.cultureTotal)} 分具备一定基础，但专业成绩 ${formatScore(profile.professionalScore)} 分会影响综合分效率。后续要同时复核专业小分线和当前院校梯度。`,
+      points
     };
   }
   if (profile.compositeGap >= 35) {
     return {
       title: "处在追赶窗口",
-      body: `孩子当前综合分 ${formatScore(profile.currentCompositeScore)}，${gapText}。这类情况不适合平均用力，先确认近三次文化成绩波动，再判断最现实的提分空间。`
+      body: `孩子当前综合分 ${formatScore(profile.currentCompositeScore)}，${gapText}。这类情况不适合平均用力，先确认近三次文化成绩波动，再判断最现实的提分空间。`,
+      points
     };
   }
   return {
     title: "专业文化相对均衡",
-    body: `孩子当前综合分 ${formatScore(profile.currentCompositeScore)}${rankText}，专业和文化都有参考价值。现在更适合先做院校梯度初筛，再结合目标院校和单科成绩细化判断。`
+    body: `孩子当前综合分 ${formatScore(profile.currentCompositeScore)}${rankText}，专业和文化都有参考价值。现在更适合先做院校梯度初筛，再结合目标院校和单科成绩细化判断。`,
+    points
   };
+}
+
+function buildSimpleStudentPoints(report) {
+  const profile = report.scoreProfile;
+  const rankText = report.rankEstimate?.rank
+    ? `估算位次约 ${report.rankEstimate.rank} 名，后续要用正式一分一段复核稳定性。`
+    : "当前位次还未校准，后台一分一段补齐后判断会更准。";
+  const gapText = profile.compositeGap > 0
+    ? `距目标综合分 ${formatScore(profile.targetCompositeScore)} 还差 ${formatScore(profile.compositeGap)} 分，文化等效约需提升 ${formatScore(profile.cultureLiftNeeded)} 分。`
+    : `当前已超过默认目标综合分 ${formatScore(profile.targetCompositeScore)}，重点转向稳定性和更高层次样本。`;
+  const structureText = profile.professionalScore >= 250 && profile.cultureTotal < 470
+    ? `专业 ${formatScore(profile.professionalScore)} 分能支撑综合分，文化 ${formatScore(profile.cultureTotal)} 分是主要上限。`
+    : profile.professionalScore < 230 && profile.cultureTotal >= 500
+      ? `文化 ${formatScore(profile.cultureTotal)} 分有基础，专业 ${formatScore(profile.professionalScore)} 分需要避免拖累综合分。`
+      : `文化 ${formatScore(profile.cultureTotal)} 分、专业 ${formatScore(profile.professionalScore)} 分都要看波动，不能只按一次成绩判断。`;
+
+  return [
+    {
+      title: "成绩结构",
+      body: structureText
+    },
+    {
+      title: "当前变量",
+      body: gapText
+    },
+    {
+      title: "位次校准",
+      body: rankText
+    }
+  ];
 }
 
 function normalizeSimpleContext(input) {
@@ -557,7 +593,7 @@ export function buildSimpleNarrativeFallback(report) {
     : profile.professionalScore < 230 && profile.cultureTotal >= 500
       ? "文化基础相对更稳，专业分会影响综合分效率。"
       : "需要同时看文化波动和专业小分线，避免只看单次总分。";
-  const schoolOpportunity = unlockedSchool
+  const schoolTierInsight = unlockedSchool
     ? `提到目标分后，可新增关注 ${unlockedSchool} 等样本。`
     : currentSample
       ? `当前可先围绕 ${currentSample.school} 等样本校准冲稳保。`
@@ -569,14 +605,19 @@ export function buildSimpleNarrativeFallback(report) {
     stageGoalInsight: compactText(`${context.studentStage}，${context.planningGoal}；${context.familyBoundary}。${contextAnalysis.goalStrategy}`, SIMPLE_FIELD_LIMITS.stageGoalInsight),
     scoreInsight: compactText(`${rankText}，${gapText}，先用院校样本判断层次。`, SIMPLE_FIELD_LIMITS.scoreInsight),
     gapReason: compactText(gapReason, SIMPLE_FIELD_LIMITS.gapReason),
-    schoolOpportunity: compactText(schoolOpportunity, SIMPLE_FIELD_LIMITS.schoolOpportunity),
+    schoolTierInsight: compactText(schoolTierInsight, SIMPLE_FIELD_LIMITS.schoolTierInsight),
     nextStep: compactText(`补充近三次文化成绩，判断 ${profile.cultureLiftNeeded} 分提升空间。`, SIMPLE_FIELD_LIMITS.nextStep)
   };
 }
 
 export function normalizeSimpleNarratives(narratives, fallback) {
   return SIMPLE_FIELDS.reduce((result, field) => {
-    const legacyValue = field === "scoreInsight" ? narratives?.advisorHook : "";
+    const legacySchoolField = `school${"Opportunity"}`;
+    const legacyValue = field === "scoreInsight"
+      ? narratives?.advisorHook
+      : field === "schoolTierInsight"
+        ? narratives?.[legacySchoolField]
+        : "";
     const value = compactText(narratives?.[field], SIMPLE_FIELD_LIMITS[field] || 36);
     result[field] = value
       || compactText(legacyValue, SIMPLE_FIELD_LIMITS[field] || 36)

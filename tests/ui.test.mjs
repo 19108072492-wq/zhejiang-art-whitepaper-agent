@@ -62,9 +62,12 @@ test("simple report renders compact professional briefing sections", async () =>
   assert.equal(simpleScript.includes("顾问讲解点"), false);
   assert.equal(simpleScript.includes("现场继续展开"), false);
   assert.equal(simpleScript.includes("分析报告"), true);
+  assert.equal(simpleScript.includes("院校层次判断"), true);
+  assert.equal(simpleScript.includes("院校吸引点"), false);
   assert.equal(simpleScript.includes("AI重点解读"), false);
   assert.equal(simpleScript.includes("simple-ai-panel"), true);
   assert.equal(simpleScript.includes("simple-ai-card"), true);
+  assert.equal(simpleScript.includes("simple-student-points"), true);
   assert.equal(simpleScript.includes("完整版白皮书会继续测什么"), true);
   assert.equal(simpleScript.includes("目标院校差距"), true);
   assert.equal(simpleScript.includes("单科提分优先级"), true);
@@ -73,6 +76,7 @@ test("simple report renders compact professional briefing sections", async () =>
   assert.equal(styles.includes(".simple-insight-grid"), true);
   assert.equal(styles.includes(".simple-focus-grid"), true);
   assert.equal(styles.includes(".simple-student-read"), true);
+  assert.equal(styles.includes(".simple-student-points"), true);
   assert.equal(styles.includes(".simple-ai-summary"), true);
   assert.equal(styles.includes(".simple-ai-panel"), true);
   assert.equal(styles.includes(".simple-ai-card"), true);
@@ -343,9 +347,11 @@ test("agent endpoints support simple short narrative mode", async () => {
   const code = `${simpleScript}\n${serverScript}\n${edgeFunction}`;
 
   assert.equal(simpleScript.includes('mode: "simple"'), true);
-  for (const field of ["headline", "stageGoalInsight", "scoreInsight", "gapReason", "schoolOpportunity", "nextStep"]) {
+  for (const field of ["headline", "stageGoalInsight", "scoreInsight", "gapReason", "schoolTierInsight", "nextStep"]) {
     assert.equal(code.includes(field), true);
   }
+  assert.equal(code.includes("院校吸引点"), false);
+  assert.equal(code.includes("schoolOpportunity"), false);
   for (const inputName of ["studentStage", "planningGoal", "familyBoundary", "scoreSource"]) {
     assert.equal(code.includes(inputName), true);
   }

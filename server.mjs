@@ -93,13 +93,13 @@ const PARENT_NARRATIVE_SYSTEM_PROMPT = [
   "9. 每个字段控制在要求字数内。"
 ].join("\n");
 
-const SIMPLE_NARRATIVE_FIELDS = ["headline", "stageGoalInsight", "scoreInsight", "gapReason", "schoolOpportunity", "nextStep"];
+const SIMPLE_NARRATIVE_FIELDS = ["headline", "stageGoalInsight", "scoreInsight", "gapReason", "schoolTierInsight", "nextStep"];
 const SIMPLE_NARRATIVE_LIMITS = {
   headline: 30,
   stageGoalInsight: 64,
   scoreInsight: 58,
   gapReason: 58,
-  schoolOpportunity: 58,
+  schoolTierInsight: 58,
   nextStep: 48
 };
 
@@ -111,8 +111,8 @@ const SIMPLE_NARRATIVE_SYSTEM_PROMPT = [
   "2. 只能解释输入数据，不得编造院校、专业、分数线、位次号、计划数。",
   "3. 输出必须是严格 JSON，不要 Markdown，不要解释过程。",
   "4. 必须结合首页家长选择：studentStage、planningGoal、familyBoundary、scoreSource。不能只按分数泛泛分析。",
-  "5. 只输出 headline、stageGoalInsight、scoreInsight、gapReason、schoolOpportunity、nextStep 六个字段。",
-  "6. headline 控制在30字以内；stageGoalInsight 控制在64字以内；scoreInsight、gapReason、schoolOpportunity 控制在58字以内；nextStep 控制在48字以内。",
+  "5. 只输出 headline、stageGoalInsight、scoreInsight、gapReason、schoolTierInsight、nextStep 六个字段。",
+  "6. headline 控制在30字以内；stageGoalInsight 控制在64字以内；scoreInsight、gapReason、schoolTierInsight 控制在58字以内；nextStep 控制在48字以内。",
   "7. stageGoalInsight 必须同时体现学生阶段和升学目标，例如高二提前规划、复读再规划、冲公办本科、先保本科等。",
   "8. 如果 familyBoundary 是省内优先，不要泛泛写“省内外机会”，应写省内样本或是否需要看省外增量。",
   "9. 不要写完整学习规划，不要给长篇建议，不要承诺录取结果。",
@@ -172,7 +172,7 @@ function buildSimpleNarrativeFallback(simplePayload) {
     stageGoalInsight: cleanSimpleText(contextAnalysis.stageGoalInsight || `${studentStage}，${planningGoal}；${familyBoundary}。先按当前分数校准路径。`, SIMPLE_NARRATIVE_LIMITS.stageGoalInsight),
     scoreInsight: cleanSimpleText(rank ? `估算位次约 ${rank} 名，距目标还差 ${gap} 分。` : `当前距目标还差 ${gap} 分，位次待校准。`, SIMPLE_NARRATIVE_LIMITS.scoreInsight),
     gapReason: cleanSimpleText(gapReason, SIMPLE_NARRATIVE_LIMITS.gapReason),
-    schoolOpportunity: cleanSimpleText(unlockedSchools[0] ? `提分后可新增关注 ${unlockedSchools[0]} 等样本。` : "先确认当前冲稳保层次，再看专业方向。", SIMPLE_NARRATIVE_LIMITS.schoolOpportunity),
+    schoolTierInsight: cleanSimpleText(unlockedSchools[0] ? `提分后可新增关注 ${unlockedSchools[0]} 等样本，重点看层次变化。` : "先确认当前冲稳保层次，再看专业方向和最低样本线。", SIMPLE_NARRATIVE_LIMITS.schoolTierInsight),
     nextStep: cleanSimpleText(`补充近三次文化成绩，判断 ${Math.ceil(gap / 0.5)} 分提升空间。`, SIMPLE_NARRATIVE_LIMITS.nextStep)
   };
 }
@@ -181,7 +181,12 @@ function normalizeSimpleNarratives(value, fallback) {
   const source = value && typeof value === "object" ? value : {};
   return SIMPLE_NARRATIVE_FIELDS.reduce((result, field) => {
     const maxLength = SIMPLE_NARRATIVE_LIMITS[field] || 48;
-    const legacyValue = field === "scoreInsight" ? source.advisorHook : "";
+    const legacySchoolField = `school${"Opportunity"}`;
+    const legacyValue = field === "scoreInsight"
+      ? source.advisorHook
+      : field === "schoolTierInsight"
+        ? source[legacySchoolField]
+        : "";
     result[field] = cleanSimpleText(source[field], maxLength) || cleanSimpleText(legacyValue, maxLength) || fallback[field];
     return result;
   }, {});
@@ -196,7 +201,7 @@ function buildSimpleNarrativePrompt(simplePayload, sourceLabel) {
     "- stageGoalInsight：阶段目标分析，64字以内，必须结合 studentStage、planningGoal、familyBoundary，不能泛泛写",
     "- scoreInsight：定位判断，58字以内，必须包含综合分、位次或目标差距",
     "- gapReason：差距原因，58字以内，必须说明文化、专业或稳定性中的一个重点",
-    "- schoolOpportunity：院校吸引点，58字以内，必须结合当前样本、提分后样本或最低样本线",
+    "- schoolTierInsight：院校层次判断，58字以内，必须结合当前冲稳保样本、提分后样本或最低样本线，用家长能读懂的分析语言",
     "- nextStep：下一步动作，48字以内，必须包含一个具体动作",
     "",
     "注意：必须结合首页家长选择，不要只看分数；不要输出完整学习规划，不要长篇叙述，不要录取承诺，不要出现 AI 或内部服务词。优先使用 simplePayload.dataContext 这份后台上传数据摘要，以及 simplePayload 中的 context、contextAnalysis、keyTakeaways、studentInterpretation、currentSamples、lowestSample、unlockedSchools 和 nextCheckpoints。",

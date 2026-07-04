@@ -3042,6 +3042,36 @@ select:focus {
   line-height: 1.58;
 }
 
+.simple-student-points {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.simple-student-points article {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: #ffffff;
+}
+
+.simple-student-points strong {
+  color: var(--brand-blue);
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1.25;
+}
+
+.simple-student-points span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 760;
+  line-height: 1.55;
+}
+
 .simple-metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -3390,7 +3420,8 @@ select:focus {
   .simple-context-grid,
   .simple-focus-grid,
   .simple-next-grid,
-  .simple-ai-summary {
+  .simple-ai-summary,
+  .simple-student-points {
     grid-template-columns: 1fr;
   }
 

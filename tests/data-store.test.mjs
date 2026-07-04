@@ -78,7 +78,15 @@ test("builds compact report record payload without raw dataset rows", () => {
         { school: "提分后大学", program: "产品设计", minScore: 570 }
       ],
       keyTakeaways: [{ title: "定位", body: "当前进入本科窗口。" }],
-      studentInterpretation: { title: "孩子解读", body: "文化总分仍是关键。" },
+      studentInterpretation: {
+        title: "孩子解读",
+        body: "文化总分仍是关键。",
+        points: [
+          { title: "成绩结构", body: "文化和专业需要一起看。" },
+          { title: "当前变量", body: "目标差距需要校准。" },
+          { title: "位次校准", body: "位次需要复核。" }
+        ]
+      },
       scoreStructure: [{ label: "文化总分", value: "450", detail: "按 50% 计入" }],
       nextCheckpoints: [{ title: "下一步", body: "补近三次成绩。" }],
       consultChecklist: ["近三次文化总分"]
@@ -86,6 +94,7 @@ test("builds compact report record payload without raw dataset rows", () => {
     narratives: {
       headline: "当前综合分525，先看层次",
       scoreInsight: "估算位次约2100名。",
+      schoolTierInsight: "当前按冲稳保层次判断。",
       nextStep: "补充近三次成绩。"
     },
     sourceLabel: "正式数据",
@@ -106,7 +115,9 @@ test("builds compact report record payload without raw dataset rows", () => {
   assert.equal(record.scoreProfile.currentCompositeScore, 525);
   assert.equal(record.rankEstimate.rank, 2100);
   assert.equal(record.narratives.headline, "当前综合分525，先看层次");
+  assert.equal(record.narratives.schoolTierInsight, "当前按冲稳保层次判断。");
   assert.equal(record.report.currentSamples.wen.school, "稳妥大学");
+  assert.equal(record.report.studentInterpretation.points.length, 3);
   assert.equal(record.report.unlockedPrograms.length, 1);
   assert.equal(record.meta.sourceLabel, "正式数据");
   assert.equal("programs" in record, false);
