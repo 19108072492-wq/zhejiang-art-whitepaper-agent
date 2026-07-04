@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>浙江艺考升学快测</title>
+    <meta name="description" content="浙江艺考家庭快速查看综合分定位、位次和院校层次。">
+    <link rel="icon" href="./assets/feifan-logo.jpg">
+    <link rel="stylesheet" href="./styles.css">
+    <script>
+      if (window.location.protocol === "file:") {
+        window.location.replace("http://127.0.0.1:8790/simple.html");
+      }
+    </script>
+  </head>
+  <body class="simple-page">
+    <main class="simple-shell">
+      <header class="simple-header">
+        <a class="simple-brand" href="./simple.html">
+          <img src="./assets/feifan-logo.jpg" alt="非凡教育标志">
+          <span>
+            <em>非凡教育</em>
+            <strong>浙江艺考升学快测</strong>
+          </span>
+        </a>
+        <a class="simple-link" href="./index.html">完整版白皮书</a>
+      </header>
+
+      <section class="simple-hero">
+        <p>家长快速测评</p>
+        <h1>3 项信息，看清当前层次</h1>
+        <span>用于现场初筛，完整规划请与顾问继续沟通。</span>
+      </section>
+
+      <section class="simple-workspace">
+        <form id="simple-form" class="simple-card simple-form-card">
+          <div class="simple-form-head">
+            <strong>快速填写</strong>
+            <span>约 30 秒完成</span>
+          </div>
+
+          <label class="simple-field">
+            艺考类别
+            <select name="artCategory">
+              <option>美术与设计</option>
+              <option>播音</option>
+              <option>舞蹈</option>
+              <option>书法</option>
+              <option>表导</option>
+              <option>音乐</option>
+            </select>
+          </label>
+
+          <label class="simple-field">
+            文化总分
+            <input name="cultureTotal" type="number" min="0" max="750" inputmode="decimal" required>
+          </label>
+
+          <label class="simple-field">
+            专业成绩
+            <input name="professionalScore" type="number" min="0" max="300" inputmode="decimal" required>
+          </label>
+
+          <div class="simple-generation" id="simple-generation" role="status" aria-live="polite" hidden>
+            <strong>正在生成快测报告</strong>
+            <span id="simple-countdown">预计还需 30 秒</span>
+            <div><i id="simple-progress"></i></div>
+          </div>
+
+          <button type="submit" class="simple-primary">生成快测报告</button>
+          <p class="simple-error" id="simple-error" role="alert" hidden></p>
+        </form>
+
+        <section id="simple-report" class="simple-report" aria-live="polite" hidden></section>
+      </section>
+    </main>
+
+    <script src="./config.js"></script>
+    <script type="module" src="./src/simple-app.mjs"></script>
+  </body>
+</html>

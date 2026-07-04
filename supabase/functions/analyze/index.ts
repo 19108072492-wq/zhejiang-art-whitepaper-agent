@@ -15,6 +15,8 @@ const parentNarrativeFields = [
   "nextStepAdvice"
 ];
 
+const simpleNarrativeFields = ["headline", "advisorHook", "nextStep"];
+
 const fieldFallback: Record<string, string> = {
   parentSummary: "从当前成绩结构看，孩子目前已经具备一定升学基础。后续需要重点关注文化课总分与目标院校参考线之间的差距，尤其是优先级较高的学科是否能形成稳定提分。",
   studentTypeInsight: "孩子当前更接近“文化课决定院校上限”的类型。接下来不建议所有学科平均用力，而应优先选择差距较明显、提分回报较高的科目作为突破口。",
@@ -59,6 +61,17 @@ const parentNarrativeSystemPrompt = [
   "6. 不能说“保证录取”“一定能上”“肯定能提分”。",
   "7. 输出必须是严格 JSON，不要 Markdown，不要解释过程。",
   "8. 每个字段控制在要求字数内。"
+].join("\n");
+
+const simpleNarrativeSystemPrompt = [
+  "你是一名浙江艺考升学快测助手。",
+  "你的任务是基于系统已计算好的数据，为家长生成极短、专业、可继续展开沟通的快测解读。",
+  "严格要求：",
+  "1. 只能解释输入数据，不得编造院校、专业、分数线、位次号、计划数。",
+  "2. 输出必须是严格 JSON，不要 Markdown，不要解释过程。",
+  "3. 只输出 headline、advisorHook、nextStep 三个字段。",
+  "4. headline 控制在 30 字以内；advisorHook 和 nextStep 各控制在 40 字以内。",
+  "5. 不要写完整学习规划，不要给长篇建议，不要承诺录取结果。"
 ].join("\n");
 
 function jsonResponse(status: number, payload: JsonObject) {
@@ -114,6 +127,49 @@ function normalizeParentNarratives(value: unknown, fallback: JsonObject) {
     result[field] = cleaned || cleanNarrativeText(fallback[field]) || fieldFallback[field];
     return result;
   }, {} as Record<string, string>);
+}
+
+function cleanSimpleText(value: unknown, maxLength: number) {
+  return String(value ?? "").replace(/\s+/g, " ").trim().slice(0, maxLength);
+}
+
+function buildSimpleNarrativeFallback(simplePayload: JsonObject) {
+  const current = Number(simplePayload.currentCompositeScore || 0);
+  const gap = Number(simplePayload.compositeGap || 0);
+  const rank = Number(simplePayload.estimatedRank || 0);
+  const unlockedSchools = Array.isArray(simplePayload.unlockedSchools)
+    ? simplePayload.unlockedSchools.map(String).filter(Boolean)
+    : [];
+  return {
+    headline: cleanSimpleText(`当前综合分 ${current}，先看层次`, 30),
+    advisorHook: cleanSimpleText(rank ? `位次约 ${rank} 名，可继续细看院校梯度` : "位次待匹配，可先看综合分层次", 40),
+    nextStep: cleanSimpleText(unlockedSchools[0] ? `提分后重点看 ${unlockedSchools[0]} 等样本` : `先确认 ${gap} 分差距能否拉动`, 40)
+  };
+}
+
+function normalizeSimpleNarratives(value: unknown, fallback: Record<string, string>) {
+  const source = asObject(value);
+  return simpleNarrativeFields.reduce((result, field) => {
+    const maxLength = field === "headline" ? 30 : 40;
+    result[field] = cleanSimpleText(source[field], maxLength) || fallback[field];
+    return result;
+  }, {} as Record<string, string>);
+}
+
+function buildSimpleNarrativePrompt(simplePayload: JsonObject, sourceLabel: string) {
+  return [
+    "请根据以下结构化数据，生成浙江艺考升学快测中的 3 条短解读。",
+    "",
+    "输出 JSON 字段：",
+    "- headline：一句核心判断，30字以内",
+    "- advisorHook：顾问可继续展开的话题，40字以内",
+    "- nextStep：下一步建议，40字以内",
+    "",
+    "注意：不要输出完整学习规划，不要长篇叙述，不要录取承诺。",
+    "",
+    `数据来源：${sourceLabel}`,
+    `结构化数据如下：${JSON.stringify(simplePayload)}`
+  ].join("\n");
 }
 
 function buildParentNarrativeFallback(payload: JsonObject) {
@@ -175,6 +231,71 @@ function safeParseAgentJson(text: string) {
       return null;
     }
   }
+}
+
+async function callSimpleAiAgent(simplePayload: JsonObject, sourceLabel: string) {
+  const apiKey = Deno.env.get("AI_API_KEY");
+  const model = Deno.env.get("AI_MODEL");
+  const baseUrl = (Deno.env.get("AI_BASE_URL") || "https://api.deepseek.com").replace(/\/$/, "");
+  const fallback = buildSimpleNarrativeFallback(simplePayload);
+
+  if (!apiKey || !model) {
+    return {
+      narratives: fallback,
+      agentMeta: {
+        mode: "local",
+        usedAi: false,
+        error: "未配置 AI_API_KEY 或 AI_MODEL，已使用本地规则解读。"
+      }
+    };
+  }
+
+  const response = await fetch(`${baseUrl}/chat/completions`, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${apiKey}`,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      model,
+      temperature: 0.2,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content: simpleNarrativeSystemPrompt
+        },
+        {
+          role: "user",
+          content: buildSimpleNarrativePrompt(simplePayload, sourceLabel)
+        }
+      ]
+    })
+  });
+
+  if (!response.ok) {
+    const detail = await response.text();
+    return {
+      narratives: fallback,
+      agentMeta: {
+        mode: "local",
+        usedAi: false,
+        error: `AI 接口调用失败：${response.status} ${detail.slice(0, 160)}`
+      }
+    };
+  }
+
+  const data = await response.json();
+  const text = data?.choices?.[0]?.message?.content || "";
+  const agentResult = safeParseAgentJson(text);
+  return {
+    narratives: normalizeSimpleNarratives(agentResult, fallback),
+    agentMeta: {
+      mode: agentResult ? "ai" : "local",
+      usedAi: Boolean(agentResult),
+      error: agentResult ? "" : "AI 返回内容不是有效 JSON，已使用本地规则解读。"
+    }
+  };
 }
 
 async function callAiAgent(narrativePayload: JsonObject, sourceLabel: string) {
@@ -253,8 +374,22 @@ Deno.serve(async (request: Request) => {
 
   try {
     const body = await request.json();
-    const narrativePayload = asObject(body.narrativePayload);
     const sourceLabel = String(body.sourceLabel || "正式数据");
+
+    if (body.mode === "simple") {
+      const simplePayload = asObject(body.simplePayload);
+      if (!Object.keys(simplePayload).length) {
+        return jsonResponse(400, { ok: false, error: "缺少简化版快测数据" });
+      }
+      const result = await callSimpleAiAgent(simplePayload, sourceLabel);
+      return jsonResponse(200, {
+        ok: true,
+        narratives: result.narratives,
+        agentMeta: result.agentMeta
+      });
+    }
+
+    const narrativePayload = asObject(body.narrativePayload);
 
     if (!Object.keys(narrativePayload).length) {
       return jsonResponse(400, { ok: false, error: "缺少解读摘要数据" });

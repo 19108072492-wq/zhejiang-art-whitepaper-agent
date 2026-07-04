@@ -16,6 +16,33 @@ test("parent form does not ask for preferred major", async () => {
   assert.equal(appScript.includes("preferredMajor"), false);
 });
 
+test("simple version has an independent fast-entry page", async () => {
+  const indexHtml = await readFile(resolve(root, "index.html"), "utf8");
+  const simpleHtml = await readFile(resolve(root, "simple.html"), "utf8");
+
+  assert.equal(indexHtml.includes("./src/app.mjs"), true);
+  assert.equal(indexHtml.includes("./src/simple-app.mjs"), false);
+  assert.equal(simpleHtml.includes("./src/simple-app.mjs"), true);
+  assert.equal(simpleHtml.includes("./config.js"), true);
+  assert.equal(simpleHtml.includes("./assets/feifan-logo.jpg"), true);
+  assert.equal(simpleHtml.includes('name="artCategory"'), true);
+  assert.equal(simpleHtml.includes('name="cultureTotal"'), true);
+  assert.equal(simpleHtml.includes('name="professionalScore"'), true);
+});
+
+test("simple version does not ask for long-form preference fields", async () => {
+  const simpleHtml = await readFile(resolve(root, "simple.html"), "utf8");
+
+  assert.equal(simpleHtml.includes("目标院校"), false);
+  assert.equal(simpleHtml.includes("喜欢城市"), false);
+  assert.equal(simpleHtml.includes("选考科目"), false);
+  assert.equal(simpleHtml.includes("选考一"), false);
+  assert.equal(simpleHtml.includes("手机号"), false);
+  assert.equal(simpleHtml.includes("语文"), false);
+  assert.equal(simpleHtml.includes("数学"), false);
+  assert.equal(simpleHtml.includes("外语"), false);
+});
+
 test("report keeps subject advice concise", async () => {
   const appScript = await readFile(resolve(root, "src/app.mjs"), "utf8");
 
@@ -193,6 +220,19 @@ test("agent endpoints only ask for five parent narrative fields", async () => {
   assert.equal(endpointCode.includes("consultantTakeaway"), false);
   assert.equal(endpointCode.includes("parentTalkTrack"), false);
   assert.equal(endpointCode.includes("subjectStrategy"), false);
+});
+
+test("agent endpoints support simple short narrative mode", async () => {
+  const simpleScript = await readFile(resolve(root, "src/simple-app.mjs"), "utf8");
+  const serverScript = await readFile(resolve(root, "server.mjs"), "utf8");
+  const edgeFunction = await readFile(resolve(root, "supabase/functions/analyze/index.ts"), "utf8");
+  const code = `${simpleScript}\n${serverScript}\n${edgeFunction}`;
+
+  assert.equal(simpleScript.includes('mode: "simple"'), true);
+  for (const field of ["headline", "advisorHook", "nextStep"]) {
+    assert.equal(code.includes(field), true);
+  }
+  assert.equal(code.includes("simplePayload"), true);
 });
 
 test("report does not render opportunity section", async () => {
