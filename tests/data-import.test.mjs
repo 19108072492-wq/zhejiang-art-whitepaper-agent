@@ -147,18 +147,18 @@ test("maps official rank direction names to broad art categories", () => {
   );
 });
 
-test("normalizes one-score-one-rank rows and estimates professional rank", () => {
+test("normalizes one-score-one-rank rows as composite rank data", () => {
   const rankRows = [
-    { "艺考类别": "美术与设计", "专业分": "290分", "位次号": "120名" },
-    { "艺考类别": "美术与设计", "专业分": "275", "位次号": "680" },
-    { "艺考类别": "美术与设计", "专业分": "260", "位次号": "1580" },
-    { "艺考类别": "舞蹈", "专业分": "275", "位次号": "310" },
-    { "艺考类别": "", "专业分": "", "累计位次": "" }
+    { "艺考类别": "美术与设计", "综合分": "590分", "位次号": "120名" },
+    { "艺考类别": "美术与设计", "综合分": "575", "位次号": "680" },
+    { "艺考类别": "美术与设计", "综合分": "560", "位次号": "1580" },
+    { "艺考类别": "舞蹈", "综合分": "575", "位次号": "310" },
+    { "艺考类别": "", "综合分": "", "累计位次": "" }
   ];
   const headers = detectRankHeaders(rankRows[0]);
 
   assert.equal(headers.artCategory, "艺考类别");
-  assert.equal(headers.score, "专业分");
+  assert.equal(headers.score, "综合分");
   assert.equal(headers.rank, "位次号");
 
   const result = normalizeRankRows(rankRows);
@@ -166,27 +166,27 @@ test("normalizes one-score-one-rank rows and estimates professional rank", () =>
   assert.equal(result.skippedRows, 1);
   assert.deepEqual(result.records[0], {
     artCategory: "美术与设计",
-    score: 290,
+    score: 590,
     rank: 120,
-    scoreType: "professional"
+    scoreType: "composite"
   });
 
   assert.deepEqual(
-    estimateRankFromScore(result.records, "美术与设计", 276),
+    estimateRankFromScore(result.records, "美术与设计", 576, { scoreType: "composite", requireScoreType: true }),
     {
       rank: 680,
-      matchedScore: 275,
+      matchedScore: 575,
       exact: false,
-      scoreType: "professional"
+      scoreType: "composite"
     }
   );
   assert.deepEqual(
-    estimateRankFromScore(result.records, "舞蹈", 275),
+    estimateRankFromScore(result.records, "舞蹈", 575, { scoreType: "composite", requireScoreType: true }),
     {
       rank: 310,
-      matchedScore: 275,
+      matchedScore: 575,
       exact: true,
-      scoreType: "professional"
+      scoreType: "composite"
     }
   );
 });
@@ -218,7 +218,7 @@ test("keeps category marks from a combined all-direction rank table", () => {
       rank: 310,
       matchedScore: 276,
       exact: true,
-      scoreType: "professional"
+      scoreType: "composite"
     }
   );
 });

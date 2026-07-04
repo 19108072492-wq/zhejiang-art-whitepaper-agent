@@ -666,25 +666,85 @@ function studyPlanGuide(subject) {
   };
 }
 
+const CONCISE_STUDY_GUIDES = {
+  "语文": {
+    problem: "作文和现代文阅读不稳定",
+    action: "固定作文结构，现代文按题型练"
+  },
+  "数学": {
+    problem: "基础题得分率低，中档题步骤不稳",
+    action: "先补选择填空，再过函数数列几何"
+  },
+  foreignLanguage: {
+    problem: "词汇和阅读是主要突破口",
+    action: "高频词回原文，阅读练定位句"
+  },
+  "历史": {
+    problem: "时间轴不清，材料概括偏弱",
+    action: "重建时间轴，材料题先圈关键词"
+  },
+  "政治": {
+    problem: "术语调用和材料对应不稳",
+    action: "按设问类型套主体和关键词"
+  },
+  "地理": {
+    problem: "读图定位和因果链不稳定",
+    action: "每天练图表，答案写条件到结论"
+  },
+  "物理": {
+    problem: "模型识别和过程列式薄弱",
+    action: "先画受力图，再做力电专题"
+  },
+  "化学": {
+    problem: "方程式和流程信息容易漏",
+    action: "补反应原理，流程题圈条件"
+  },
+  "生物": {
+    problem: "概念迁移和实验变量不清",
+    action: "画概念图，实验题先找变量"
+  },
+  "技术": {
+    problem: "流程判断和方案评价不稳",
+    action: "按条件约束比较方案优劣"
+  }
+};
+
+function conciseStudyPlanGuide(subject) {
+  return CONCISE_STUDY_GUIDES[subjectAdviceKey(subject.name)] ?? {
+    problem: `${subject.name}基础题和常见题型不稳`,
+    action: `先补${subject.name}错题高频模块`
+  };
+}
+
+const STUDY_PLAN_TIE_PRIORITY = ["数学", "英语", "日语", "语文", "技术", "物理", "化学", "生物", "地理", "历史", "政治"];
+
+function studyPlanTiePriority(subject) {
+  const key = subjectAdviceKey(subject.name);
+  if (key === "foreignLanguage") return 1;
+  const index = STUDY_PLAN_TIE_PRIORITY.indexOf(subject.name);
+  return index >= 0 ? index : STUDY_PLAN_TIE_PRIORITY.length;
+}
+
 export function buildStudyPlan(scoreProfile) {
-  return scoreProfile.priorities.map((subject) => {
-    const guide = studyPlanGuide(subject);
-    return {
-      subject: subject.name,
-      current: subject.current,
-      target: subject.target,
-      gap: subject.gap,
-      level: subject.gap >= 25 ? "优先突破" : subject.gap >= 12 ? "重点提升" : subject.gap > 0 ? "保持巩固" : "优势维持",
-      focus: focusForSubject(subject),
-      diagnosis: `当前 ${subject.current} 分，${subject.scoreBand}。${guide.diagnosis}`,
-      keyTasks: guide.keyTasks,
-      days30: guide.days30,
-      days60: guide.days60,
-      days90: guide.days90,
-      checkpoint: guide.checkpoint,
-      parentAction: guide.parentAction
-    };
-  });
+  return [...scoreProfile.priorities]
+    .sort((a, b) =>
+      b.gap - a.gap
+      || studyPlanTiePriority(a) - studyPlanTiePriority(b)
+      || a.name.localeCompare(b.name, "zh-Hans-CN"))
+    .slice(0, 3)
+    .map((subject) => {
+      const guide = conciseStudyPlanGuide(subject);
+      return {
+        subject: subject.name,
+        current: subject.current,
+        target: subject.target,
+        targetScore: subject.target,
+        gap: subject.gap,
+        level: subject.gap >= 25 ? "优先突破" : subject.gap >= 12 ? "重点提升" : subject.gap > 0 ? "保持巩固" : "优势维持",
+        problem: guide.problem,
+        action: guide.action
+      };
+    });
 }
 
 function isProgramAllowed(input, program) {

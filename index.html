@@ -264,7 +264,15 @@
               接受较高学费
             </label>
           </div>
-
+          <div class="generation-status" id="generation-status" role="status" aria-live="polite" hidden>
+            <div>
+              <strong>正在生成规划白皮书</strong>
+              <span id="generation-countdown">预计还需 30 秒</span>
+            </div>
+            <div class="generation-progress" aria-hidden="true">
+              <span id="generation-progress-bar"></span>
+            </div>
+          </div>
           <button type="submit" class="primary-button">生成规划白皮书</button>
           <p class="form-error" id="form-error" role="alert" hidden></p>
         </form>

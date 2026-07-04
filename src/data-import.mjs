@@ -38,8 +38,12 @@ function recognizedArtCategory(value) {
   return ART_CATEGORIES.some((item) => item.value === category) ? category : "";
 }
 
+function normalizedRankScoreType() {
+  return "composite";
+}
+
 function rankScoreType(header) {
-  return /综合/.test(cleanText(header)) ? "composite" : "professional";
+  return normalizedRankScoreType(header);
 }
 
 function detectField(headers, aliases, options = {}) {
@@ -209,7 +213,7 @@ export function estimateRankFromScore(records, artCategory, score, options = {})
     .sort((a, b) => toNumber(b.score) - toNumber(a.score));
 
   if (options.scoreType) {
-    const typedRows = scopedRows.filter((row) => row.scoreType === options.scoreType);
+    const typedRows = scopedRows.filter((row) => normalizedRankScoreType(row.scoreType) === options.scoreType);
     if (typedRows.length) {
       scopedRows = typedRows;
     } else if (options.requireScoreType) {
@@ -225,6 +229,6 @@ export function estimateRankFromScore(records, artCategory, score, options = {})
     rank: toNumber(matched.rank),
     matchedScore: toNumber(matched.score),
     exact: toNumber(matched.score) === currentScore,
-    scoreType: matched.scoreType || ""
+    scoreType: options.scoreType || normalizedRankScoreType(matched.scoreType)
   };
 }

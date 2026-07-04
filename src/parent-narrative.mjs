@@ -146,7 +146,7 @@ export function buildParentNarrativePayload(input, whitepaper) {
     student: {
       category: input.artCategory || "",
       professionalScore: input.professionalScore ?? 0,
-      estimatedProfessionalRank: input.professionalRankEstimate?.rank ?? input.professionalRank ?? 0,
+      estimatedCompositeRank: input.compositeRankEstimate?.rank ?? input.compositeRank ?? 0,
       cultureTotal: scoreProfile.currentTotal ?? 0,
       currentCompositeScore: scoreProfile.currentCompositeScore ?? 0,
       targetCompositeScore: scoreProfile.targetCompositeScore ?? 0,

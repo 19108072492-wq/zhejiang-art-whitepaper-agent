@@ -492,13 +492,17 @@ label {
 }
 
 .fieldset-block legend {
-  padding: 0 6px;
+  float: left;
+  width: 100%;
+  margin: 0 0 2px;
+  padding: 0;
   color: var(--ink);
   font-size: 15px;
   font-weight: 850;
 }
 
 .fieldset-block > p {
+  clear: both;
   margin: 0;
   color: var(--muted);
   font-size: 12px;
@@ -716,6 +720,52 @@ select:focus {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.6;
+}
+
+.generation-status {
+  display: grid;
+  gap: 10px;
+  border: 1px solid color-mix(in srgb, var(--brand-blue) 28%, var(--line));
+  border-radius: 8px;
+  padding: 12px;
+  background:
+    linear-gradient(90deg, rgba(255, 220, 0, 0.22), transparent 48%),
+    color-mix(in srgb, var(--accent-soft) 64%, var(--surface));
+}
+
+.generation-status > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.generation-status strong {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.generation-status span {
+  color: var(--brand-blue);
+  font-size: 13px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.generation-progress {
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(0, 99, 173, 0.13);
+}
+
+.generation-progress span {
+  width: 0%;
+  height: 100%;
+  display: block;
+  border-radius: inherit;
+  background: var(--brand-blue);
+  transition: width 280ms ease;
 }
 
 .form-error {
@@ -1573,6 +1623,40 @@ select:focus {
   font-size: 18px;
 }
 
+.plan-brief {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.plan-brief div {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  border-radius: 8px;
+  padding: 9px 10px;
+  background: var(--surface-strong);
+}
+
+.plan-brief dt,
+.plan-brief dd {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.plan-brief dt {
+  color: var(--brand-blue);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.plan-brief dd {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 760;
+}
+
 .plan-card p {
   margin-bottom: 0;
   color: var(--muted);
@@ -2219,6 +2303,21 @@ select:focus {
     font-size: 16px;
   }
 
+  .generation-status {
+    padding: 11px;
+  }
+
+  .generation-status > div:first-child {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .generation-status strong,
+  .generation-status span {
+    font-size: 13px;
+  }
+
   .report {
     gap: 12px;
   }
@@ -2296,6 +2395,10 @@ select:focus {
   .program-card dl,
   .plan-checks {
     grid-template-columns: 1fr;
+  }
+
+  .plan-brief div {
+    grid-template-columns: 64px minmax(0, 1fr);
   }
 
   .comparison-row {

@@ -16,21 +16,25 @@ test("parent form does not ask for preferred major", async () => {
   assert.equal(appScript.includes("preferredMajor"), false);
 });
 
-test("report includes subject knowledge advice section", async () => {
+test("report keeps subject advice concise", async () => {
   const appScript = await readFile(resolve(root, "src/app.mjs"), "utf8");
 
-  assert.equal(appScript.includes("科目知识补强建议"), true);
-  assert.equal(appScript.includes("提分点"), true);
+  assert.equal(appScript.includes("优先提分科目 TOP3"), true);
+  assert.equal(appScript.includes("问题"), true);
+  assert.equal(appScript.includes("提分动作"), true);
+  assert.equal(appScript.includes("目标分数"), true);
+  assert.equal(appScript.includes("科目知识补强建议"), false);
 });
 
-test("study plan renders diagnosis, tasks, checkpoints, and parent follow-up", async () => {
+test("study plan does not render long-form guidance blocks", async () => {
   const appScript = await readFile(resolve(root, "src/app.mjs"), "utf8");
 
-  assert.equal(appScript.includes("现状诊断"), true);
-  assert.equal(appScript.includes("关键任务"), true);
-  assert.equal(appScript.includes("验收指标"), true);
-  assert.equal(appScript.includes("家长跟进"), true);
-  assert.equal(appScript.includes("plan.slice(0, 4)"), false);
+  assert.equal(appScript.includes("30 / 60 / 90 天学习计划"), false);
+  assert.equal(appScript.includes("现状诊断"), false);
+  assert.equal(appScript.includes("关键任务"), false);
+  assert.equal(appScript.includes("验收指标"), false);
+  assert.equal(appScript.includes("家长跟进"), false);
+  assert.equal(appScript.includes("plan.slice(0, 3)"), true);
 });
 
 test("uses Feifan poster brand styling and report layout", async () => {
@@ -58,6 +62,8 @@ test("uses Feifan poster brand styling and report layout", async () => {
   assert.equal(styles.includes(".poster-ribbon"), true);
   assert.equal(styles.includes(".report-cover"), true);
   assert.equal(styles.includes(".report-score-board"), true);
+  assert.equal(styles.includes(".fieldset-block legend"), true);
+  assert.equal(styles.includes("float: left;"), true);
   assert.equal(appScript.includes("report-brand-row"), true);
   assert.equal(appScript.includes("report-hero-grid"), true);
   assert.ok(logo.byteLength > 1000);
@@ -76,6 +82,33 @@ test("front end waits for parent narratives before rendering report", async () =
   assert.equal(appScript.includes("renderReport(whitepaper, source, input, normalizedNarratives)"), true);
   assert.equal(appScript.includes("renderReport(whitepaper, source, input);"), false);
   assert.equal(appScript.includes(".then((agentNarratives)"), false);
+});
+
+test("generation flow shows a countdown status while waiting", async () => {
+  const indexHtml = await readFile(resolve(root, "index.html"), "utf8");
+  const appScript = await readFile(resolve(root, "src/app.mjs"), "utf8");
+  const styles = await readFile(resolve(root, "styles.css"), "utf8");
+
+  assert.equal(indexHtml.includes('id="generation-status"'), true);
+  assert.equal(indexHtml.includes("预计还需"), true);
+  assert.equal(appScript.includes("GENERATION_COUNTDOWN_SECONDS"), true);
+  assert.equal(appScript.includes("startGenerationCountdown"), true);
+  assert.equal(appScript.includes("stopGenerationCountdown"), true);
+  assert.equal(appScript.includes("isGenerating"), true);
+  assert.equal(styles.includes(".generation-status"), true);
+  assert.equal(styles.includes(".generation-progress"), true);
+});
+
+test("rank display uses composite score instead of professional conversion", async () => {
+  const appScript = await readFile(resolve(root, "src/app.mjs"), "utf8");
+
+  assert.equal(appScript.includes("专业折算分"), false);
+  assert.equal(appScript.includes("估算专业位次"), false);
+  assert.equal(appScript.includes("估算综合分位次"), true);
+  assert.equal(appScript.includes("按一分一段表"), true);
+  assert.equal(appScript.includes("综合分分档估算位次"), true);
+  assert.equal(appScript.includes('"chinese", "math", "english"'), true);
+  assert.equal(appScript.includes('"elective1Score", "elective2Score", "elective3Score"'), true);
 });
 
 test("front end keeps AI secrets out of browser files", async () => {

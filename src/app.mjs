@@ -23,8 +23,14 @@ const reportRoot = document.querySelector("#report");
 const formError = document.querySelector("#form-error");
 const rankEstimateNode = document.querySelector("#rank-estimate");
 const submitButton = form.querySelector('button[type="submit"]');
+const generationStatus = document.querySelector("#generation-status");
+const generationCountdown = document.querySelector("#generation-countdown");
+const generationProgressBar = document.querySelector("#generation-progress-bar");
 const DEFAULT_AGENT_API_PATH = "/api/analyze";
 const NARRATIVE_LOADING_TEXT = "正在生成个性化解读……";
+const GENERATION_COUNTDOWN_SECONDS = 30;
+let generationCountdownTimer = 0;
+let isGenerating = false;
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -81,13 +87,11 @@ function formatLocation(program) {
   return [program.province, program.city].filter(Boolean).join(" / ") || "待补充";
 }
 
-function getRankEstimate(artCategory, professionalScore, compositeScore) {
+function getRankEstimate(artCategory, compositeScore) {
   const rankPayload = loadRankPayload();
   return estimateRankFromScore(rankPayload.records, artCategory, compositeScore, {
     scoreType: "composite",
     requireScoreType: true
-  }) || estimateRankFromScore(rankPayload.records, artCategory, professionalScore, {
-    scoreType: "professional"
   });
 }
 
@@ -134,11 +138,11 @@ function readInput() {
     acceptHighTuition: formData.has("acceptHighTuition")
   };
   const scoreProfile = calculateScoreProfile(input);
-  const rankEstimate = getRankEstimate(artCategory, professionalScore, scoreProfile.currentCompositeScore);
+  const rankEstimate = getRankEstimate(artCategory, scoreProfile.currentCompositeScore);
   return {
     ...input,
-    professionalRank: rankEstimate?.rank ?? 0,
-    professionalRankEstimate: rankEstimate
+    compositeRank: rankEstimate?.rank ?? 0,
+    compositeRankEstimate: rankEstimate
   };
 }
 
@@ -253,15 +257,14 @@ function updateRankEstimate() {
   }
 
   const input = readInput();
-  const estimate = input.professionalRankEstimate;
+  const estimate = input.compositeRankEstimate;
   if (!estimate) {
     rankEstimateNode.textContent = "已记录成绩；暂无可匹配的一分一段位次数据。";
     rankEstimateNode.classList.add("muted");
     return;
   }
 
-  const scoreLabel = estimate.scoreType === "composite" ? "综合分" : "专业分";
-  rankEstimateNode.textContent = `按一分一段表 ${estimate.matchedScore} ${scoreLabel}分档估算，位次约 ${estimate.rank} 名。`;
+  rankEstimateNode.textContent = `按一分一段表 ${estimate.matchedScore} 综合分分档估算，位次约 ${estimate.rank} 名。`;
   rankEstimateNode.classList.remove("muted");
 }
 
@@ -345,7 +348,7 @@ function renderScoreCards(profile) {
       <article class="metric-card">
         <span>当前综合分</span>
         <strong>${formatScore(profile.currentCompositeScore)}</strong>
-        <small>文化 ${profile.currentTotal} · 专业折算 ${formatScore(profile.professionalConvertedScore)}</small>
+        <small>文化 ${profile.currentTotal} · 专业 ${formatScore(profile.professionalScore)} / 300</small>
       </article>
       <article class="metric-card accent">
         <span>目标综合分</span>
@@ -385,11 +388,11 @@ function renderPresentationBrief(brief) {
 
 function renderProfessionalPosition(input, profile) {
   if (!input.professionalScore) return "";
-  const estimate = input.professionalRankEstimate;
+  const estimate = input.compositeRankEstimate;
   return `
     <section class="panel result-section professional-section">
       <div class="section-heading">
-        <p>专业成绩定位</p>
+        <p>综合分位次定位</p>
       </div>
       <div class="professional-position">
         <article>
@@ -397,14 +400,14 @@ function renderProfessionalPosition(input, profile) {
           <strong>${escapeHtml(formatScore(input.professionalScore))}</strong>
         </article>
         <article>
-          <span>专业折算分</span>
-          <strong>${escapeHtml(formatScore(profile.professionalConvertedScore))}</strong>
+          <span>当前综合分</span>
+          <strong>${escapeHtml(formatScore(profile.currentCompositeScore))}</strong>
         </article>
         <article>
-          <span>${estimate?.scoreType === "composite" ? "估算综合分位次" : "估算专业位次"}</span>
+          <span>估算综合分位次</span>
           <strong>${estimate ? escapeHtml(estimate.rank) : "待匹配"}</strong>
         </article>
-        <p>综合分 = 文化总分 × 50% + 专业成绩 × 2.5 × 50%。${estimate ? `按一分一段表 ${estimate.matchedScore} ${estimate.scoreType === "composite" ? "综合分" : "专业分"}分档估算位次。` : "暂未匹配到一分一段位次，报告先按综合分与志愿偏好分析。"}</p>
+        <p>综合分 = 文化总分 × 50% + 专业成绩 × 2.5 × 50%。${estimate ? `按一分一段表 ${estimate.matchedScore} 综合分分档估算位次。` : "暂未匹配到一分一段位次，报告先按综合分与志愿偏好分析。"}</p>
       </div>
     </section>
   `;
@@ -414,7 +417,7 @@ function renderSubjectTable(profile, narratives) {
   return `
     <section class="panel result-section">
       <div class="section-heading">
-        <p>学科提分优先级</p>
+        <p>文化课各科差距</p>
       </div>
       <div class="subject-list">
         ${profile.subjects.map((subject) => `
@@ -426,22 +429,6 @@ function renderSubjectTable(profile, narratives) {
           </div>
         `).join("")}
       </div>
-      <div class="subject-advice">
-        <div class="subsection-title">科目知识补强建议</div>
-        <div class="subject-advice-grid">
-          ${profile.priorities.map((subject) => `
-            <article class="subject-advice-card">
-              <div>
-                <strong>${escapeHtml(subject.name)}</strong>
-                <span>${escapeHtml(subject.scoreBand)}</span>
-              </div>
-              <p><b>提分点</b>${escapeHtml(subject.boostPoint)}</p>
-              <p><b>知识补强</b>${escapeHtml(subject.knowledgeAdvice)}</p>
-            </article>
-          `).join("")}
-        </div>
-      </div>
-      ${renderNarrativeBlock("学科提分优先级解释", "subjectPriorityInsight", narratives)}
     </section>
   `;
 }
@@ -450,31 +437,20 @@ function renderPlan(plan) {
   return `
     <section class="panel result-section">
       <div class="section-heading">
-        <p>30 / 60 / 90 天学习计划</p>
+        <p>优先提分科目 TOP3</p>
       </div>
       <div class="plan-grid">
-        ${plan.map((item) => `
+        ${plan.slice(0, 3).map((item, index) => `
           <article class="plan-card">
             <div>
-              <span>${escapeHtml(item.level)}</span>
-              <strong>${escapeHtml(item.subject)} 差 ${item.gap} 分</strong>
+              <span>TOP ${index + 1}</span>
+              <strong>${escapeHtml(item.subject)}：差 ${item.gap} 分</strong>
             </div>
-            <p class="plan-diagnosis"><b>现状诊断</b>${escapeHtml(item.diagnosis || item.focus)}</p>
-            <div class="plan-task-block">
-              <b>关键任务</b>
-              <ul>
-                ${(item.keyTasks ?? []).map((task) => `<li>${escapeHtml(task)}</li>`).join("")}
-              </ul>
-            </div>
-            <ul class="plan-timeline">
-              <li><b>30 天</b>${escapeHtml(item.days30)}</li>
-              <li><b>60 天</b>${escapeHtml(item.days60)}</li>
-              <li><b>90 天</b>${escapeHtml(item.days90)}</li>
-            </ul>
-            <div class="plan-checks">
-              <p><b>验收指标</b>${escapeHtml(item.checkpoint || "看错题订正和限时训练记录是否稳定。")}</p>
-              <p><b>家长跟进</b>${escapeHtml(item.parentAction || "每周看一次错题分类和阶段小测记录。")}</p>
-            </div>
+            <dl class="plan-brief">
+              <div><dt>问题</dt><dd>${escapeHtml(item.problem)}</dd></div>
+              <div><dt>提分动作</dt><dd>${escapeHtml(item.action)}</dd></div>
+              <div><dt>目标分数</dt><dd>${formatScore(item.targetScore)} 分</dd></div>
+            </dl>
           </article>
         `).join("")}
       </div>
@@ -624,10 +600,56 @@ function setFormError(message) {
   formError.hidden = !message;
 }
 
+function updateGenerationCountdown(secondsLeft) {
+  const safeSeconds = Math.max(0, secondsLeft);
+  if (generationCountdown) {
+    generationCountdown.textContent = safeSeconds > 0
+      ? `预计还需 ${safeSeconds} 秒`
+      : "正在整理报告内容，请稍候";
+  }
+  if (generationProgressBar) {
+    const progress = ((GENERATION_COUNTDOWN_SECONDS - safeSeconds) / GENERATION_COUNTDOWN_SECONDS) * 100;
+    generationProgressBar.style.width = `${Math.max(0, Math.min(100, progress))}%`;
+  }
+  if (submitButton?.disabled) {
+    submitButton.textContent = safeSeconds > 0
+      ? `生成中，约 ${safeSeconds} 秒`
+      : "正在整理报告...";
+  }
+}
+
+function stopGenerationCountdown() {
+  if (generationCountdownTimer) {
+    window.clearInterval(generationCountdownTimer);
+    generationCountdownTimer = 0;
+  }
+  if (generationStatus) generationStatus.hidden = true;
+  if (generationProgressBar) generationProgressBar.style.width = "0%";
+}
+
+function startGenerationCountdown() {
+  stopGenerationCountdown();
+  if (generationStatus) generationStatus.hidden = false;
+  let secondsLeft = GENERATION_COUNTDOWN_SECONDS;
+  updateGenerationCountdown(secondsLeft);
+  window.requestAnimationFrame(() => {
+    generationStatus?.scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+  generationCountdownTimer = window.setInterval(() => {
+    secondsLeft -= 1;
+    updateGenerationCountdown(secondsLeft);
+  }, 1000);
+}
+
 function setSubmitLoading(isLoading) {
   if (!submitButton) return;
   submitButton.disabled = isLoading;
-  submitButton.textContent = isLoading ? "正在生成完整白皮书..." : "生成规划白皮书";
+  if (isLoading) {
+    startGenerationCountdown();
+  } else {
+    stopGenerationCountdown();
+    submitButton.textContent = "生成规划白皮书";
+  }
 }
 
 async function requestParentNarratives(narrativePayload, source) {
@@ -743,12 +765,15 @@ form.elements.namedItem("artCategory").addEventListener("change", () => {
   setFormError("");
 });
 
-form.elements.namedItem("professionalScore").addEventListener("input", () => {
-  updateRankEstimate();
-});
+for (const name of ["professionalScore", "chinese", "math", "english", "elective1Score", "elective2Score", "elective3Score"]) {
+  form.elements.namedItem(name).addEventListener("input", () => {
+    updateRankEstimate();
+  });
+}
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (isGenerating) return;
   const input = readInput();
   const validationMessage = validateFormInput(input);
   if (validationMessage) {
@@ -757,6 +782,7 @@ form.addEventListener("submit", async (event) => {
   }
   setFormError("");
   const source = getProgramSource(input.artCategory);
+  isGenerating = true;
   setSubmitLoading(true);
   try {
     const whitepaper = generateWhitepaper(input, source.programs);
@@ -773,6 +799,7 @@ form.addEventListener("submit", async (event) => {
     renderReport(whitepaper, source, input, normalizedNarratives);
     reportRoot.scrollIntoView({ behavior: "smooth", block: "start" });
   } finally {
+    isGenerating = false;
     setSubmitLoading(false);
   }
 });

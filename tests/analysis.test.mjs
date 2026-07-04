@@ -132,34 +132,47 @@ test("calculates current total, target total, and subject gaps", () => {
   );
 });
 
-test("prioritizes the largest gaps in the study plan", () => {
+test("builds a concise top 3 subject lift plan", () => {
   const profile = calculateScoreProfile(studentInput);
   const plan = buildStudyPlan(profile);
 
+  assert.equal(plan.length, 3);
   assert.equal(plan[0].subject, "数学");
   assert.equal(plan[0].gap, 5);
-  assert.match(plan[0].focus, /基础题|中档题/);
-  assert.match(plan[0].days30, /错题/);
-  assert.equal(plan.at(-1).gap, 1);
+  assert.equal(plan[0].targetScore, 67);
+  assert.match(plan[0].problem, /基础题|中档题/);
+  assert.match(plan[0].action, /选择填空|基础题/);
+  assert.equal(plan.every((item) => item.problem && item.action && Number.isFinite(item.targetScore)), true);
+  assert.equal(plan.some((item) => "days30" in item || "keyTasks" in item || "parentAction" in item), false);
 });
 
-test("creates deep non-repetitive subject-specific study plans", () => {
+test("uses short subject-specific problem and action copy", () => {
   const profile = calculateScoreProfile(studentInput);
   const plan = buildStudyPlan(profile);
   const math = plan.find((item) => item.subject === "数学");
   const chinese = plan.find((item) => item.subject === "语文");
   const english = plan.find((item) => item.subject === "英语");
-  const history = plan.find((item) => item.subject === "历史");
 
-  assert.equal(new Set(plan.map((item) => item.days30)).size, plan.length);
-  assert.equal(plan.every((item) => item.diagnosis && item.checkpoint && item.parentAction), true);
-  assert.equal(plan.every((item) => Array.isArray(item.keyTasks) && item.keyTasks.length >= 3), true);
-  assert.match(math.days30, /函数|数列|计算/);
-  assert.match(chinese.days30, /作文|文言|阅读/);
-  assert.match(english.days30, /词汇|阅读|写作/);
-  assert.match(history.days30, /时间轴|史实|材料/);
-  assert.match(math.checkpoint, /正确率|限时/);
-  assert.match(chinese.parentAction, /作文|素材|面批/);
+  assert.match(math.problem, /基础题|计算/);
+  assert.match(math.action, /选择填空|函数|几何/);
+  assert.match(chinese.problem, /作文|阅读|文言/);
+  assert.match(chinese.action, /作文|现代文|古诗文/);
+  assert.match(english.problem, /词汇|阅读/);
+  assert.match(english.action, /高频词|定位句/);
+  assert.equal(plan.every((item) => item.problem.length <= 28 && item.action.length <= 32), true);
+});
+
+test("prefers core culture subjects when lift gaps are tied", () => {
+  const plan = buildStudyPlan({
+    priorities: [
+      { name: "历史", current: 74, target: 75, gap: 1 },
+      { name: "数学", current: 62, target: 63, gap: 1 },
+      { name: "英语", current: 90, target: 91, gap: 1 },
+      { name: "语文", current: 88, target: 89, gap: 1 }
+    ]
+  });
+
+  assert.deepEqual(plan.map((item) => item.subject), ["数学", "英语", "语文"]);
 });
 
 test("adds score-band subject analysis and knowledge advice", () => {

@@ -19,9 +19,9 @@ const input = {
     { name: "地理", score: 76 }
   ],
   professionalScore: 246,
-  professionalRank: 1200,
-  professionalRankEstimate: {
-    matchedScore: 246,
+  compositeRank: 1200,
+  compositeRankEstimate: {
+    matchedScore: 543,
     rank: 1200
   },
   targetSchools: ["中国美术学院", "浙江理工大学"],
@@ -114,6 +114,8 @@ test("builds a compact parent narrative payload from rule results only", () => {
   assert.equal(payload.student.currentCompositeScore, 543);
   assert.equal(payload.student.targetCompositeScore, 550);
   assert.equal(payload.student.compositeGap, 7);
+  assert.equal(payload.student.estimatedCompositeRank, 1200);
+  assert.equal(payload.student.estimatedProfessionalRank, undefined);
   assert.deepEqual(payload.targets.selectedSchools, ["中国美术学院", "浙江理工大学"]);
   assert.equal(payload.targets.currentMatchesSummary.chong[0].school, "南京艺术学院");
   assert.equal(payload.subjects.topPrioritySubjects[0].name, "数学");
