@@ -25,6 +25,23 @@ const mimeTypes = {
 
 loadLocalEnv();
 const port = Number(process.env.PORT || 8787);
+const INTERNAL_WORD_REPLACEMENTS = [
+  ["顾问视角", "家长阅读建议"],
+  ["内部提示", "报告提示"],
+  ["现场确认", "后续建议补充确认"],
+  ["现场", "后续"],
+  ["顾问", "报告"],
+  ["销售", "服务"],
+  ["转化", "形成"],
+  ["邀约", "后续沟通"],
+  ["到访", "后续沟通"],
+  ["成交", "结果"],
+  ["客户意向", "家长关注点"],
+  ["客户", "家庭"],
+  ["加微信", "补充联系方式"],
+  ["留资", "补充信息"],
+  ["话术", "说明"]
+];
 
 function loadLocalEnv() {
   const envPath = join(rootDir, ".env");
@@ -75,13 +92,15 @@ const SIMPLE_NARRATIVE_FIELDS = ["headline", "advisorHook", "nextStep"];
 
 const SIMPLE_NARRATIVE_SYSTEM_PROMPT = [
   "你是一名浙江艺考升学快测助手。",
-  "你的任务是基于系统已计算好的数据，为家长生成极短、专业、可继续展开沟通的快测解读。",
+  "你的任务是基于系统已计算好的数据，为家长生成极短、专业、可直接阅读的快测解读。",
   "严格要求：",
   "1. 只能解释输入数据，不得编造院校、专业、分数线、位次号、计划数。",
   "2. 输出必须是严格 JSON，不要 Markdown，不要解释过程。",
   "3. 只输出 headline、advisorHook、nextStep 三个字段。",
-  "4. headline 控制在 30 字以内；advisorHook 和 nextStep 各控制在 40 字以内。",
-  "5. 不要写完整学习规划，不要给长篇建议，不要承诺录取结果。"
+  "4. headline 控制在 24 字以内；advisorHook 控制在 32 字以内；nextStep 控制在 36 字以内。",
+  "5. 不要写完整学习规划，不要给长篇建议，不要承诺录取结果。",
+  "6. 不要出现顾问、话术、邀约、成交、客户、转化等内部服务词。",
+  "7. 每个字段必须引用至少一个具体数据、位次、差距、院校样本或下一步动作。"
 ].join("\n");
 
 function buildParentNarrativePrompt(narrativePayload, sourceLabel) {
@@ -105,7 +124,11 @@ function buildParentNarrativePrompt(narrativePayload, sourceLabel) {
 }
 
 function cleanSimpleText(value, maxLength) {
-  return String(value ?? "").replace(/\s+/g, " ").trim().slice(0, maxLength);
+  let cleaned = String(value ?? "").replace(/\s+/g, " ").trim();
+  for (const [pattern, replacement] of INTERNAL_WORD_REPLACEMENTS) {
+    cleaned = cleaned.replaceAll(pattern, replacement);
+  }
+  return cleaned.slice(0, maxLength);
 }
 
 function buildSimpleNarrativeFallback(simplePayload) {
@@ -114,16 +137,16 @@ function buildSimpleNarrativeFallback(simplePayload) {
   const rank = simplePayload.estimatedRank || 0;
   const unlockedSchools = Array.isArray(simplePayload.unlockedSchools) ? simplePayload.unlockedSchools : [];
   return {
-    headline: cleanSimpleText(`当前综合分 ${current}，先看层次`, 30),
-    advisorHook: cleanSimpleText(rank ? `位次约 ${rank} 名，可继续细看院校梯度` : "位次待匹配，可先看综合分层次", 40),
-    nextStep: cleanSimpleText(unlockedSchools[0] ? `提分后重点看 ${unlockedSchools[0]} 等样本` : `先确认 ${gap} 分差距能否拉动`, 40)
+    headline: cleanSimpleText(`当前综合分 ${current}，先看层次`, 24),
+    advisorHook: cleanSimpleText(rank ? `位次约 ${rank} 名，核对院校梯度` : "位次待匹配，先看综合分层次", 32),
+    nextStep: cleanSimpleText(unlockedSchools[0] ? `提分后新增关注 ${unlockedSchools[0]}` : `先确认 ${gap} 分差距能否拉动`, 36)
   };
 }
 
 function normalizeSimpleNarratives(value, fallback) {
   const source = value && typeof value === "object" ? value : {};
   return SIMPLE_NARRATIVE_FIELDS.reduce((result, field) => {
-    const maxLength = field === "headline" ? 30 : 40;
+    const maxLength = field === "headline" ? 24 : field === "advisorHook" ? 32 : 36;
     result[field] = cleanSimpleText(source[field], maxLength) || fallback[field];
     return result;
   }, {});
@@ -134,11 +157,11 @@ function buildSimpleNarrativePrompt(simplePayload, sourceLabel) {
     "请根据以下结构化数据，生成浙江艺考升学快测中的 3 条短解读。",
     "",
     "输出 JSON 字段：",
-    "- headline：一句核心判断，30字以内",
-    "- advisorHook：顾问可继续展开的话题，40字以内",
-    "- nextStep：下一步建议，40字以内",
+    "- headline：一句核心判断，24字以内，必须包含当前综合分或差距",
+    "- advisorHook：家长可直接阅读的补充判断，32字以内，必须包含位次、院校样本或层次判断",
+    "- nextStep：下一步建议，36字以内，必须包含一个具体动作",
     "",
-    "注意：不要输出完整学习规划，不要长篇叙述，不要录取承诺。",
+    "注意：不要输出完整学习规划，不要长篇叙述，不要录取承诺，不要出现内部服务词。优先使用 simplePayload 中的 keyTakeaways、currentSamples、unlockedSchools 和 nextCheckpoints。",
     "",
     `数据来源：${sourceLabel}`,
     `结构化数据如下：${JSON.stringify(simplePayload)}`

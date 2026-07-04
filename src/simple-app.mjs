@@ -67,7 +67,11 @@ function readInput() {
   return {
     artCategory: String(data.get("artCategory") || "美术与设计"),
     cultureTotal: toNumber(data.get("cultureTotal")),
-    professionalScore: toNumber(data.get("professionalScore"))
+    professionalScore: toNumber(data.get("professionalScore")),
+    studentStage: String(data.get("studentStage") || "高三下学期"),
+    scoreSource: String(data.get("scoreSource") || "最近一次模考"),
+    planningGoal: String(data.get("planningGoal") || "先保本科"),
+    familyBoundary: String(data.get("familyBoundary") || "暂不确定")
   };
 }
 
@@ -135,6 +139,12 @@ function formatLocation(program) {
   return [program?.province, program?.city].filter(Boolean).join(" / ") || "地区待补";
 }
 
+function formatDiff(diff) {
+  const number = toNumber(diff);
+  if (!number) return "贴近参考线";
+  return number > 0 ? `高出参考线 ${formatScore(number)} 分` : `低于参考线 ${formatScore(Math.abs(number))} 分`;
+}
+
 function renderProgram(program, fallback) {
   if (!program) return `<div class="simple-empty">${escapeHtml(fallback)}</div>`;
   return `
@@ -142,13 +152,14 @@ function renderProgram(program, fallback) {
       <strong>${escapeHtml(program.school)}</strong>
       <span>${escapeHtml(program.program)}</span>
       <small>${escapeHtml(formatLocation(program))} · ${escapeHtml(program.schoolLevel || "层次待补")} · 综合 ${escapeHtml(formatScore(program.minScore))}</small>
+      <em>${escapeHtml(formatDiff(program.diff))}</em>
     </article>
   `;
 }
 
 function renderUnlocked(programs) {
   if (!programs.length) {
-    return `<div class="simple-empty">暂无明显新增样本，建议先把当前层次讲清楚。</div>`;
+    return `<div class="simple-empty">暂无明显新增样本，建议先把当前层次确认清楚。</div>`;
   }
   return programs.map((program) => `
     <article class="simple-unlocked-card">
@@ -159,9 +170,33 @@ function renderUnlocked(programs) {
   `).join("");
 }
 
+function renderInsightCards(items, modifier = "") {
+  return items.map((item) => `
+    <article class="simple-insight-card ${modifier}">
+      <strong>${escapeHtml(item.title || item.label)}</strong>
+      <span>${escapeHtml(item.body || item.detail)}</span>
+      ${item.value ? `<b>${escapeHtml(item.value)}</b>` : ""}
+    </article>
+  `).join("");
+}
+
+function renderChecklist(items) {
+  return items.map((item) => `<span>${escapeHtml(item)}</span>`).join("");
+}
+
+function renderAiSummary(narratives) {
+  return `
+    <div class="simple-ai-summary">
+      <p>${escapeHtml(narratives.advisorHook)}</p>
+      <p>${escapeHtml(narratives.nextStep)}</p>
+    </div>
+  `;
+}
+
 function renderReport(report, narratives, source) {
   const profile = report.scoreProfile;
   form.hidden = true;
+  document.body.classList.add("simple-report-mode");
   reportRoot.hidden = false;
   reportRoot.innerHTML = `
     <div class="simple-report-actions">
@@ -187,42 +222,75 @@ function renderReport(report, narratives, source) {
           <strong>${formatScore(profile.compositeGap)}</strong>
         </article>
       </div>
+      ${renderAiSummary(narratives)}
+    </section>
+
+    <section class="simple-card simple-focus">
+      <div class="simple-section-title">
+        <span>关键判断</span>
+        <strong>先看这三件事</strong>
+      </div>
+      <div class="simple-insight-grid simple-focus-grid">
+        ${renderInsightCards(report.keyTakeaways)}
+      </div>
+    </section>
+
+    <section class="simple-card simple-score-strip">
+      <div class="simple-section-title">
+        <span>成绩结构</span>
+        <strong>用于校准综合分</strong>
+      </div>
+      <div class="simple-insight-grid simple-score-grid">
+        ${renderInsightCards(report.scoreStructure, "simple-score-item")}
+      </div>
     </section>
 
     <section class="simple-card simple-schools">
       <div class="simple-section-title">
-        <span>当前可关注</span>
+        <span>当前院校快照</span>
         <strong>冲 / 稳 / 保快照</strong>
       </div>
       <div class="simple-tier-grid">
-        <div><b>冲</b>${renderProgram(report.currentSamples.chong, "暂无冲刺样本")}</div>
-        <div><b>稳</b>${renderProgram(report.currentSamples.wen, "暂无稳妥样本")}</div>
-        <div><b>保</b>${renderProgram(report.currentSamples.bao, "暂无保底样本")}</div>
+        <div><b>冲</b>${renderProgram(report.currentSamples.chong, report.tierFallbacks.chong)}</div>
+        <div><b>稳</b>${renderProgram(report.currentSamples.wen, report.tierFallbacks.wen)}</div>
+        <div><b>保</b>${renderProgram(report.currentSamples.bao, report.tierFallbacks.bao)}</div>
       </div>
     </section>
 
     <section class="simple-card simple-lift">
       <div class="simple-section-title">
         <span>提分后可能打开</span>
-        <strong>代表样本</strong>
+        <strong>新增关注样本</strong>
       </div>
       <div class="simple-unlocked-grid">
         ${renderUnlocked(report.unlockedPrograms)}
       </div>
     </section>
 
-    <section class="simple-card simple-advisor">
+    <section class="simple-card simple-next">
       <div class="simple-section-title">
-        <span>顾问讲解点</span>
-        <strong>现场继续展开</strong>
+        <span>下一步确认</span>
+        <strong>补齐这些信息后再精筛</strong>
+      </div>
+      <div class="simple-insight-grid simple-next-grid">
+        ${renderInsightCards(report.nextCheckpoints)}
+      </div>
+      <div class="simple-checklist">
+        ${renderChecklist(report.consultChecklist)}
+      </div>
+    </section>
+
+    <section class="simple-card simple-full-hook">
+      <div>
+        <span>想看更完整的升学判断</span>
+        <strong>完整版白皮书会继续测什么？</strong>
       </div>
       <ul>
-        ${report.advisorPoints.map((point) => `<li>${escapeHtml(point)}</li>`).join("")}
+        <li><b>目标院校差距</b><span>对比当前分数与 1-3 所目标院校的距离。</span></li>
+        <li><b>单科提分优先级</b><span>看语数外和选考科目，找最该先补的 TOP3。</span></li>
+        <li><b>提分前后冲稳保</b><span>对比现在能关注什么，提分后可能打开什么。</span></li>
       </ul>
-      <div class="simple-ai-note">
-        <p>${escapeHtml(narratives.advisorHook)}</p>
-        <p>${escapeHtml(narratives.nextStep)}</p>
-      </div>
+      <a href="./index.html">进入完整版白皮书</a>
     </section>
   `;
   reportRoot.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -276,6 +344,7 @@ form.addEventListener("submit", async (event) => {
 
 reportRoot.addEventListener("click", (event) => {
   if (!event.target.closest("[data-action='edit-simple']")) return;
+  document.body.classList.remove("simple-report-mode");
   form.hidden = false;
   reportRoot.hidden = true;
   reportRoot.replaceChildren();

@@ -22,12 +22,18 @@ test("simple version has an independent fast-entry page", async () => {
 
   assert.equal(indexHtml.includes("./src/app.mjs"), true);
   assert.equal(indexHtml.includes("./src/simple-app.mjs"), false);
+  assert.equal(indexHtml.includes('href="./simple.html"'), true);
+  assert.equal(indexHtml.includes("简易版快测"), true);
   assert.equal(simpleHtml.includes("./src/simple-app.mjs"), true);
   assert.equal(simpleHtml.includes("./config.js"), true);
   assert.equal(simpleHtml.includes("./assets/feifan-logo.jpg"), true);
   assert.equal(simpleHtml.includes('name="artCategory"'), true);
   assert.equal(simpleHtml.includes('name="cultureTotal"'), true);
   assert.equal(simpleHtml.includes('name="professionalScore"'), true);
+  assert.equal(simpleHtml.includes('name="studentStage"'), true);
+  assert.equal(simpleHtml.includes('name="scoreSource"'), true);
+  assert.equal(simpleHtml.includes('name="planningGoal"'), true);
+  assert.equal(simpleHtml.includes('name="familyBoundary"'), true);
 });
 
 test("simple version does not ask for long-form preference fields", async () => {
@@ -41,6 +47,28 @@ test("simple version does not ask for long-form preference fields", async () => 
   assert.equal(simpleHtml.includes("语文"), false);
   assert.equal(simpleHtml.includes("数学"), false);
   assert.equal(simpleHtml.includes("外语"), false);
+});
+
+test("simple report renders compact professional briefing sections", async () => {
+  const simpleScript = await readFile(resolve(root, "src/simple-app.mjs"), "utf8");
+  const styles = await readFile(resolve(root, "styles.css"), "utf8");
+
+  for (const label of ["关键判断", "成绩结构", "当前院校快照", "提分后可能打开", "下一步确认"]) {
+    assert.equal(simpleScript.includes(label), true);
+  }
+  assert.equal(simpleScript.includes("consultChecklist"), true);
+  assert.equal(simpleScript.includes("simple-checklist"), true);
+  assert.equal(simpleScript.includes("顾问讲解点"), false);
+  assert.equal(simpleScript.includes("现场继续展开"), false);
+  assert.equal(simpleScript.includes("完整版白皮书会继续测什么"), true);
+  assert.equal(simpleScript.includes("目标院校差距"), true);
+  assert.equal(simpleScript.includes("单科提分优先级"), true);
+  assert.equal(simpleScript.includes("提分前后冲稳保"), true);
+  assert.equal(styles.includes(".simple-full-hook"), true);
+  assert.equal(styles.includes(".simple-insight-grid"), true);
+  assert.equal(styles.includes(".simple-focus-grid"), true);
+  assert.equal(styles.includes(".simple-ai-summary"), true);
+  assert.equal(styles.includes(".simple-checklist"), true);
 });
 
 test("report keeps subject advice concise", async () => {

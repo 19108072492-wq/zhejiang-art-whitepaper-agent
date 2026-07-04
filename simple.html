@@ -26,20 +26,38 @@
         <a class="simple-link" href="./index.html">完整版白皮书</a>
       </header>
 
-      <section class="simple-hero">
-        <p>家长快速测评</p>
-        <h1>3 项信息，看清当前层次</h1>
-        <span>用于现场初筛，完整规划请与顾问继续沟通。</span>
-      </section>
+      <section class="simple-intake">
+        <aside class="simple-intro-panel">
+          <section class="simple-hero">
+            <p>浙江艺考家庭快测</p>
+            <h1>输入关键成绩，看清升学层次</h1>
+            <span>用分数、阶段和家庭边界，生成一份清晰易读的升学初筛报告。</span>
+          </section>
 
-      <section class="simple-workspace">
+          <div class="simple-brief-list">
+            <article>
+              <strong>分数定位</strong>
+              <span>先判断当前综合分和目标差距。</span>
+            </article>
+            <article>
+              <strong>院校梯度</strong>
+              <span>生成冲、稳、保代表样本。</span>
+            </article>
+            <article>
+              <strong>后续重点</strong>
+              <span>明确下一步需要补充确认的信息。</span>
+            </article>
+          </div>
+        </aside>
+
+        <section class="simple-workspace">
         <form id="simple-form" class="simple-card simple-form-card">
           <div class="simple-form-head">
             <strong>快速填写</strong>
             <span>约 30 秒完成</span>
           </div>
 
-          <label class="simple-field">
+          <label class="simple-field simple-field-full">
             艺考类别
             <select name="artCategory">
               <option>美术与设计</option>
@@ -61,6 +79,54 @@
             <input name="professionalScore" type="number" min="0" max="300" inputmode="decimal" required>
           </label>
 
+          <div class="simple-form-section">
+            <strong>辅助判断</strong>
+            <span>选一下即可，报告会更像规划而不是算分。</span>
+          </div>
+
+          <label class="simple-field">
+            当前阶段
+            <select name="studentStage">
+              <option>高三下学期</option>
+              <option>高三上学期</option>
+              <option>高二提前规划</option>
+              <option>考后估分</option>
+              <option>复读/再规划</option>
+            </select>
+          </label>
+
+          <label class="simple-field">
+            成绩来源
+            <select name="scoreSource">
+              <option>最近一次模考</option>
+              <option>校内月考</option>
+              <option>统考后估分</option>
+              <option>正式成绩</option>
+              <option>家长预估</option>
+            </select>
+          </label>
+
+          <label class="simple-field">
+            升学目标
+            <select name="planningGoal">
+              <option>先保本科</option>
+              <option>冲公办本科</option>
+              <option>冲省重点/强专业</option>
+              <option>暂无明确目标</option>
+            </select>
+          </label>
+
+          <label class="simple-field">
+            家庭边界
+            <select name="familyBoundary">
+              <option>暂不确定</option>
+              <option>省内优先</option>
+              <option>省外也可看</option>
+              <option>公办优先</option>
+              <option>中外合作可沟通</option>
+            </select>
+          </label>
+
           <div class="simple-generation" id="simple-generation" role="status" aria-live="polite" hidden>
             <strong>正在生成快测报告</strong>
             <span id="simple-countdown">预计还需 30 秒</span>
@@ -69,9 +135,10 @@
 
           <button type="submit" class="simple-primary">生成快测报告</button>
           <p class="simple-error" id="simple-error" role="alert" hidden></p>
-        </form>
+          </form>
 
-        <section id="simple-report" class="simple-report" aria-live="polite" hidden></section>
+          <section id="simple-report" class="simple-report" aria-live="polite" hidden></section>
+        </section>
       </section>
     </main>
 

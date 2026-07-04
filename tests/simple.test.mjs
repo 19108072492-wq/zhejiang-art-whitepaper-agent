@@ -2,8 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   buildSimpleAgentRequest,
+  buildSimpleMatchInput,
+  buildSimpleNarrativeFallback,
   buildSimpleReport,
-  calculateSimpleScoreProfile
+  calculateSimpleScoreProfile,
+  normalizeSimpleNarratives
 } from "../src/simple-core.mjs";
 
 const programs = [
@@ -97,6 +100,57 @@ test("builds a concise report with one sample per current tier", () => {
   assert.ok(report.unlockedPrograms.length <= 2);
 });
 
+test("simple report includes compact parent-facing briefing blocks", () => {
+  const report = buildSimpleReport(
+    {
+      artCategory: "美术与设计",
+      cultureTotal: 450,
+      professionalScore: 240
+    },
+    programs,
+    rankRecords
+  );
+
+  assert.equal(report.scoreStructure.length, 4);
+  assert.equal(report.contextCards.length, 4);
+  assert.equal(report.keyTakeaways.length, 3);
+  assert.ok(report.positionSignals.length >= 3);
+  assert.equal(report.liftLevers.length, 3);
+  assert.equal(report.nextCheckpoints.length, 3);
+  assert.equal(report.consultChecklist.length, 6);
+  assert.equal(report.lowestProgram.school, "保底学院");
+});
+
+test("simple boundary fields adjust match assumptions without adding long inputs", () => {
+  const provinceFirst = buildSimpleMatchInput({
+    artCategory: "美术与设计",
+    familyBoundary: "省内优先"
+  });
+  const publicFirst = buildSimpleMatchInput({
+    artCategory: "美术与设计",
+    familyBoundary: "公办优先"
+  });
+
+  assert.equal(provinceFirst.acceptOutsideZhejiang, false);
+  assert.equal(publicFirst.acceptSinoForeign, false);
+  assert.equal(publicFirst.acceptHighTuition, false);
+});
+
+test("simple tier fallback explains distance to the lowest available sample", () => {
+  const report = buildSimpleReport(
+    {
+      artCategory: "美术与设计",
+      cultureTotal: 300,
+      professionalScore: 180
+    },
+    programs,
+    []
+  );
+
+  assert.equal(report.currentSamples.bao, null);
+  assert.match(report.tierFallbacks.bao, /距离 保底学院 等最低样本线还差 125 分/);
+});
+
 test("builds simple AI request with only three short narrative fields", () => {
   const report = buildSimpleReport(
     {
@@ -112,6 +166,32 @@ test("builds simple AI request with only three short narrative fields", () => {
   assert.equal(request.mode, "simple");
   assert.equal(request.sourceLabel, "参考数据");
   assert.deepEqual(request.expectedFields, ["headline", "advisorHook", "nextStep"]);
+  assert.equal(request.simplePayload.context.studentStage, "高三下学期");
+  assert.equal(request.simplePayload.keyTakeaways.length, 3);
+  assert.equal(request.simplePayload.nextCheckpoints.length, 3);
   assert.equal("parentSummary" in request.simplePayload, false);
   assert.equal("studyPlan" in request.simplePayload, false);
+});
+
+test("simple narratives stay short and remove internal wording", () => {
+  const report = buildSimpleReport(
+    {
+      artCategory: "美术与设计",
+      cultureTotal: 450,
+      professionalScore: 240
+    },
+    programs,
+    rankRecords
+  );
+  const fallback = buildSimpleNarrativeFallback(report);
+  const narratives = normalizeSimpleNarratives({
+    headline: "当前综合分525分，顾问现场可继续展开很多内容",
+    advisorHook: "顾问建议现场重点讲位次约2100名和冲稳保院校梯度",
+    nextStep: "邀约客户补充近三次成绩并加微信继续沟通"
+  }, fallback);
+
+  assert.ok(narratives.headline.length <= 24);
+  assert.ok(narratives.advisorHook.length <= 32);
+  assert.ok(narratives.nextStep.length <= 36);
+  assert.equal(/顾问|现场|邀约|客户|加微信|话术/.test(Object.values(narratives).join("")), false);
 });
