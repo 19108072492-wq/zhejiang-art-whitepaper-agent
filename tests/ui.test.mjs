@@ -299,6 +299,14 @@ test("agent endpoints support simple short narrative mode", async () => {
   assert.equal(code.includes("simplePayload"), true);
 });
 
+test("local server proxies data API to avoid missing /api/data during preview", async () => {
+  const serverScript = await readFile(resolve(root, "server.mjs"), "utf8");
+
+  assert.equal(serverScript.includes("DEFAULT_DATA_API_URL"), true);
+  assert.equal(serverScript.includes("handleDataProxy"), true);
+  assert.equal(serverScript.includes('url.pathname === "/api/data"'), true);
+});
+
 test("report does not render opportunity section", async () => {
   const appScript = await readFile(resolve(root, "src/app.mjs"), "utf8");
   const styles = await readFile(resolve(root, "styles.css"), "utf8");

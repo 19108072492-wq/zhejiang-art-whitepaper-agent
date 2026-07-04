@@ -25,6 +25,7 @@ const mimeTypes = {
 
 loadLocalEnv();
 const port = Number(process.env.PORT || 8787);
+const DEFAULT_DATA_API_URL = "https://eyzcleghbczxxptdwlkq.supabase.co/functions/v1/data";
 const INTERNAL_WORD_REPLACEMENTS = [
   ["顾问视角", "家长阅读建议"],
   ["内部提示", "报告提示"],
@@ -363,6 +364,31 @@ async function handleAnalyze(request, response) {
   }
 }
 
+async function handleDataProxy(request, response) {
+  const dataApiUrl = (process.env.WHITEPAPER_DATA_API_URL || DEFAULT_DATA_API_URL).trim();
+  try {
+    const body = await readJson(request);
+    const upstream = await fetch(dataApiUrl, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify(body)
+    });
+    const text = await upstream.text();
+    response.writeHead(upstream.status, {
+      "content-type": upstream.headers.get("content-type") || "application/json; charset=utf-8",
+      "cache-control": "no-store"
+    });
+    response.end(text);
+  } catch (error) {
+    jsonResponse(response, 502, {
+      ok: false,
+      error: error instanceof Error ? error.message : "数据接口转发失败"
+    });
+  }
+}
+
 function safeStaticPath(urlPath) {
   const decodedPath = decodeURIComponent(urlPath.split("?")[0]);
   const normalizedPath = normalize(decodedPath === "/" ? "/index.html" : decodedPath);
@@ -395,6 +421,10 @@ const server = createServer((request, response) => {
   const url = new URL(request.url, `http://${request.headers.host}`);
   if (request.method === "POST" && url.pathname === "/api/analyze") {
     handleAnalyze(request, response);
+    return;
+  }
+  if (request.method === "POST" && url.pathname === "/api/data") {
+    handleDataProxy(request, response);
     return;
   }
   serveStatic(request, response);
