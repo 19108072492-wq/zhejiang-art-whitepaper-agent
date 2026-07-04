@@ -189,12 +189,44 @@ function renderChecklist(items) {
   return items.map((item) => `<span>${escapeHtml(item)}</span>`).join("");
 }
 
-function renderAiSummary(narratives) {
+function renderAnalysisReport(narratives) {
+  const cards = [
+    {
+      title: "阶段目标",
+      body: narratives.stageGoalInsight
+    },
+    {
+      title: "定位判断",
+      body: narratives.scoreInsight
+    },
+    {
+      title: "差距原因",
+      body: narratives.gapReason
+    },
+    {
+      title: "院校吸引点",
+      body: narratives.schoolOpportunity
+    },
+    {
+      title: "下一步动作",
+      body: narratives.nextStep
+    }
+  ];
   return `
-    <div class="simple-ai-summary">
-      <p>${escapeHtml(narratives.advisorHook)}</p>
-      <p>${escapeHtml(narratives.nextStep)}</p>
-    </div>
+    <section class="simple-card simple-ai-panel">
+      <div class="simple-section-title">
+        <span>分析报告</span>
+        <strong>重点分析</strong>
+      </div>
+      <div class="simple-ai-summary">
+        ${cards.map((card) => `
+          <article class="simple-ai-card">
+            <strong>${escapeHtml(card.title)}</strong>
+            <p>${escapeHtml(card.body)}</p>
+          </article>
+        `).join("")}
+      </div>
+    </section>
   `;
 }
 
@@ -227,8 +259,9 @@ function renderReport(report, narratives, source) {
           <strong>${formatScore(profile.compositeGap)}</strong>
         </article>
       </div>
-      ${renderAiSummary(narratives)}
     </section>
+
+    ${renderAnalysisReport(narratives)}
 
     <section class="simple-card simple-focus">
       <div class="simple-section-title">

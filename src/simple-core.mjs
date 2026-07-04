@@ -7,13 +7,19 @@ const ABOVE_TARGET_SIMPLE_LIFT = 8;
 const CULTURE_WEIGHT = 0.5;
 const PROFESSIONAL_CONVERSION_RATE = 2.5;
 const PROFESSIONAL_WEIGHT = 0.5;
-const SIMPLE_FIELDS = ["headline", "advisorHook", "nextStep"];
+const SIMPLE_FIELDS = ["headline", "stageGoalInsight", "scoreInsight", "gapReason", "schoolOpportunity", "nextStep"];
 const SIMPLE_FIELD_LIMITS = {
-  headline: 24,
-  advisorHook: 32,
-  nextStep: 36
+  headline: 30,
+  stageGoalInsight: 64,
+  scoreInsight: 58,
+  gapReason: 58,
+  schoolOpportunity: 58,
+  nextStep: 48
 };
 const SIMPLE_WORD_REPLACEMENTS = [
+  ["AI解读", "分析报告"],
+  ["AI分析", "分析"],
+  ["AI", ""],
   ["顾问视角", "家长阅读建议"],
   ["现场确认", "后续建议补充确认"],
   ["现场", "后续"],
@@ -80,6 +86,13 @@ function compactText(value, maxLength = 36) {
     text = text.replaceAll(pattern, replacement);
   }
   return text.slice(0, maxLength);
+}
+
+function firstCurrentSample(report) {
+  return report.currentSamples?.wen
+    || report.currentSamples?.bao
+    || report.currentSamples?.chong
+    || null;
 }
 
 function categoryPrograms(programs, artCategory) {
@@ -317,9 +330,48 @@ function sourceHint(source) {
 
 function goalHint(goal) {
   if (goal.includes("省重点") || goal.includes("强专业")) return "优先观察提分后能否打开更高层次。";
-  if (goal.includes("公办")) return "重点看分差、专业方向与省内外机会。";
+  if (goal.includes("公办")) return "重点看分差、专业方向与家庭可接受范围内的院校机会。";
   if (goal.includes("暂无")) return "先用冲稳保样本帮助家庭形成目标。";
   return "先保证本科窗口，再讨论冲刺空间。";
+}
+
+function stageStrategy(stage) {
+  if (stage.includes("高二")) return "高二还有时间窗口，重点不是立刻定死院校，而是先把文化波动和专业方向跑清楚";
+  if (stage.includes("上学期")) return "高三上仍有调整空间，适合用阶段成绩判断目标能不能往上推";
+  if (stage.includes("估分")) return "考后估分阶段要少看感觉，多用位次和院校样本校准梯度";
+  if (stage.includes("复读")) return "复读再规划要先复盘上次失分和志愿风险，再决定是保稳还是继续上冲";
+  return "高三下时间窗口较紧，重点是把可执行目标和冲稳保边界先锁定";
+}
+
+function goalStrategy(goal) {
+  if (goal.includes("省重点") || goal.includes("强专业")) return "目标偏上冲，需要看提分后能否打开更高层次样本";
+  if (goal.includes("公办")) return "目标是公办本科，要同时看分差、专业限制和家庭边界内的院校样本";
+  if (goal.includes("暂无")) return "目标暂不明确，先用当前分数反推合理院校层次";
+  return "目标先保本科，优先确认最低样本线和稳定保底空间";
+}
+
+function boundaryStrategy(boundary) {
+  if (boundary.includes("省内")) return "家庭边界偏省内，样本选择会更窄，需要提前判断省外增量是否值得看";
+  if (boundary.includes("省外")) return "省外可看时，院校样本池更大，但要补充城市和学费边界";
+  if (boundary.includes("公办")) return "公办优先会压缩中外合作和高学费机会，需要看分数是否支撑";
+  if (boundary.includes("中外")) return "中外合作可沟通，可以作为分数边界附近的机会样本单独比较";
+  return "家庭边界暂不确定，先保留更多样本，再逐步收窄选择";
+}
+
+function buildSimpleContextAnalysis(report) {
+  const context = report.context;
+  const profile = report.scoreProfile;
+  const stageText = stageStrategy(context.studentStage);
+  const goalText = goalStrategy(context.planningGoal);
+  const boundaryText = boundaryStrategy(context.familyBoundary);
+  const sourceText = sourceHint(context.scoreSource);
+  return {
+    stageStrategy: stageText,
+    goalStrategy: goalText,
+    boundaryStrategy: boundaryText,
+    scoreSourceRisk: sourceText,
+    stageGoalInsight: `${context.studentStage}，${context.planningGoal}；${context.familyBoundary}。当前综合分 ${formatScore(profile.currentCompositeScore)}，${stageText}。`
+  };
 }
 
 function boundaryHint(boundary) {
@@ -480,6 +532,7 @@ export function buildSimpleReport(input, programs = [], rankRecords = []) {
     scoreStructure: buildSimpleScoreStructure(scoreProfile),
     contextCards: buildSimpleContextCards(input),
     studentInterpretation: buildSimpleStudentInterpretation(report),
+    contextAnalysis: buildSimpleContextAnalysis(report),
     keyTakeaways: buildSimpleKeyTakeaways(report),
     positionSignals: buildSimplePositionSignals(report),
     liftLevers: buildSimpleLiftLevers(report),
@@ -491,20 +544,43 @@ export function buildSimpleReport(input, programs = [], rankRecords = []) {
 
 export function buildSimpleNarrativeFallback(report) {
   const profile = report.scoreProfile;
+  const context = report.context;
+  const contextAnalysis = report.contextAnalysis || buildSimpleContextAnalysis(report);
   const unlockedSchool = report.unlockedPrograms[0]?.school;
+  const currentSample = firstCurrentSample(report);
+  const rankText = report.rankEstimate?.rank ? `估算位次约 ${report.rankEstimate.rank} 名` : "位次待一分一段校准";
+  const gapText = profile.compositeGap > 0
+    ? `距目标综合分还差 ${formatScore(profile.compositeGap)} 分`
+    : "已超过默认目标综合分";
+  const gapReason = profile.professionalScore >= 250 && profile.cultureTotal < 470
+    ? "专业分有支撑，主要看文化总分能否稳定拉动。"
+    : profile.professionalScore < 230 && profile.cultureTotal >= 500
+      ? "文化基础相对更稳，专业分会影响综合分效率。"
+      : "需要同时看文化波动和专业小分线，避免只看单次总分。";
+  const schoolOpportunity = unlockedSchool
+    ? `提到目标分后，可新增关注 ${unlockedSchool} 等样本。`
+    : currentSample
+      ? `当前可先围绕 ${currentSample.school} 等样本校准冲稳保。`
+      : report.lowestProgram
+        ? `先看距离 ${report.lowestProgram.school} 等最低样本线的差距。`
+        : "后台补齐院校表后，可显示更具体的冲稳保样本。";
   return {
-    headline: compactText(`当前综合分 ${profile.currentCompositeScore}，先看层次`, SIMPLE_FIELD_LIMITS.headline),
-    advisorHook: unlockedSchool
-      ? compactText(`提分后新增关注 ${unlockedSchool}`, SIMPLE_FIELD_LIMITS.advisorHook)
-      : compactText("先确认当前冲稳保层次，再看专业方向", SIMPLE_FIELD_LIMITS.advisorHook),
-    nextStep: compactText(`补充近三次文化成绩，判断 ${profile.cultureLiftNeeded} 分空间`, SIMPLE_FIELD_LIMITS.nextStep)
+    headline: compactText(`当前综合分 ${profile.currentCompositeScore}，${positionLabel(profile.currentCompositeScore)}`, SIMPLE_FIELD_LIMITS.headline),
+    stageGoalInsight: compactText(`${context.studentStage}，${context.planningGoal}；${context.familyBoundary}。${contextAnalysis.goalStrategy}`, SIMPLE_FIELD_LIMITS.stageGoalInsight),
+    scoreInsight: compactText(`${rankText}，${gapText}，先用院校样本判断层次。`, SIMPLE_FIELD_LIMITS.scoreInsight),
+    gapReason: compactText(gapReason, SIMPLE_FIELD_LIMITS.gapReason),
+    schoolOpportunity: compactText(schoolOpportunity, SIMPLE_FIELD_LIMITS.schoolOpportunity),
+    nextStep: compactText(`补充近三次文化成绩，判断 ${profile.cultureLiftNeeded} 分提升空间。`, SIMPLE_FIELD_LIMITS.nextStep)
   };
 }
 
 export function normalizeSimpleNarratives(narratives, fallback) {
   return SIMPLE_FIELDS.reduce((result, field) => {
+    const legacyValue = field === "scoreInsight" ? narratives?.advisorHook : "";
     const value = compactText(narratives?.[field], SIMPLE_FIELD_LIMITS[field] || 36);
-    result[field] = value || compactText(fallback[field], SIMPLE_FIELD_LIMITS[field] || 36);
+    result[field] = value
+      || compactText(legacyValue, SIMPLE_FIELD_LIMITS[field] || 36)
+      || compactText(fallback[field], SIMPLE_FIELD_LIMITS[field] || 36);
     return result;
   }, {});
 }
@@ -528,6 +604,14 @@ export function buildSimpleAgentRequest(report, sourceLabel = "参考数据", da
       positionSignals: report.positionSignals,
       liftLevers: report.liftLevers,
       nextCheckpoints: report.nextCheckpoints,
+      studentInterpretation: report.studentInterpretation,
+      contextAnalysis: report.contextAnalysis,
+      lowestSample: report.lowestProgram ? {
+        school: report.lowestProgram.school,
+        program: report.lowestProgram.program,
+        minScore: report.lowestProgram.minScore,
+        schoolLevel: report.lowestProgram.schoolLevel || ""
+      } : null,
       currentSamples: Object.fromEntries(
         Object.entries(report.currentSamples).map(([tier, program]) => [
           tier,

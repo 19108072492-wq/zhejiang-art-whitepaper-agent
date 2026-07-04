@@ -2450,6 +2450,9 @@ select:focus {
     linear-gradient(180deg, rgba(255, 220, 0, 0.14), transparent 260px),
     #f7f8f6;
   color: var(--ink);
+  font-size: 15px;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 .simple-shell {
@@ -2502,12 +2505,12 @@ select:focus {
 .simple-brand em {
   color: var(--brand-blue);
   font-size: 12px;
-  font-weight: 900;
+  font-weight: 850;
 }
 
 .simple-brand strong {
   font-size: 16px;
-  font-weight: 950;
+  font-weight: 900;
 }
 
 .simple-link,
@@ -2518,7 +2521,7 @@ select:focus {
   background: var(--surface);
   color: var(--brand-blue);
   font-size: 13px;
-  font-weight: 850;
+  font-weight: 820;
 }
 
 .simple-intake {
@@ -2571,13 +2574,13 @@ select:focus {
 .simple-hero p {
   color: var(--brand-blue);
   font-size: 13px;
-  font-weight: 900;
+  font-weight: 850;
 }
 
 .simple-hero h1 {
   max-width: 640px;
   font-size: clamp(32px, 4vw, 46px);
-  line-height: 1.08;
+  line-height: 1.12;
   letter-spacing: 0;
 }
 
@@ -2585,7 +2588,7 @@ select:focus {
   color: var(--muted);
   max-width: 600px;
   font-size: 15px;
-  font-weight: 700;
+  font-weight: 680;
   line-height: 1.52;
 }
 
@@ -2609,13 +2612,13 @@ select:focus {
 .simple-brief-list strong {
   color: var(--brand-blue);
   font-size: 15px;
-  font-weight: 950;
+  font-weight: 900;
 }
 
 .simple-brief-list span {
   color: var(--muted);
   font-size: 13px;
-  font-weight: 780;
+  font-weight: 700;
   line-height: 1.5;
 }
 
@@ -2660,7 +2663,7 @@ select:focus {
 .simple-form-head strong,
 .simple-section-title strong {
   font-size: 18px;
-  font-weight: 950;
+  font-weight: 900;
 }
 
 .simple-form-head span,
@@ -2668,7 +2671,7 @@ select:focus {
 .simple-report-brand span {
   color: var(--muted);
   font-size: 13px;
-  font-weight: 850;
+  font-weight: 780;
 }
 
 .simple-field {
@@ -2676,7 +2679,7 @@ select:focus {
   gap: 7px;
   color: var(--muted);
   font-size: 13px;
-  font-weight: 850;
+  font-weight: 780;
 }
 
 .simple-form-section {
@@ -2689,13 +2692,13 @@ select:focus {
 .simple-form-section strong {
   color: var(--ink);
   font-size: 15px;
-  font-weight: 950;
+  font-weight: 900;
 }
 
 .simple-form-section span {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 780;
+  font-weight: 700;
   line-height: 1.45;
 }
 
@@ -2710,7 +2713,7 @@ select:focus {
   color: var(--ink);
   font: inherit;
   font-size: 16px;
-  font-weight: 850;
+  font-weight: 780;
 }
 
 .simple-primary {
@@ -2720,7 +2723,7 @@ select:focus {
   background: var(--brand-blue);
   color: #ffffff;
   font-size: 17px;
-  font-weight: 950;
+  font-weight: 900;
   cursor: pointer;
 }
 
@@ -2733,7 +2736,7 @@ select:focus {
   margin: 0;
   color: var(--brand-red);
   font-size: 13px;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .simple-generation {
@@ -2797,6 +2800,7 @@ select:focus {
 }
 
 .simple-result-hero,
+.simple-ai-panel,
 .simple-score-breakdown,
 .simple-score-strip,
 .simple-context,
@@ -2815,6 +2819,7 @@ select:focus {
 }
 
 .simple-result-hero,
+.simple-ai-panel,
 .simple-focus,
 .simple-student-read,
 .simple-score-strip,
@@ -2852,7 +2857,7 @@ select:focus {
   margin: 0;
   max-width: 720px;
   font-size: clamp(24px, 4vw, 42px);
-  line-height: 1.12;
+  line-height: 1.16;
 }
 
 .simple-result-note {
@@ -2868,19 +2873,41 @@ select:focus {
 
 .simple-ai-summary {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 10px;
 }
 
-.simple-ai-summary p {
+.simple-ai-panel {
+  background:
+    linear-gradient(180deg, rgba(0, 99, 173, 0.07), transparent 110px),
+    #ffffff;
+}
+
+.simple-ai-card {
+  display: grid;
+  align-content: start;
+  gap: 8px;
   margin: 0;
+  min-height: 118px;
+  border: 1px solid rgba(0, 99, 173, 0.14);
   border-radius: 8px;
-  padding: 11px 12px;
-  background: rgba(255, 220, 0, 0.22);
+  padding: 12px;
+  background: #ffffff;
+}
+
+.simple-ai-card strong {
+  color: var(--brand-blue);
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1.22;
+}
+
+.simple-ai-card p {
+  margin: 0;
   color: var(--ink);
   font-size: 14px;
-  font-weight: 850;
-  line-height: 1.42;
+  font-weight: 760;
+  line-height: 1.52;
 }
 
 .simple-student-read {
@@ -2898,7 +2925,7 @@ select:focus {
   background: var(--surface-strong);
   color: var(--ink);
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 740;
   line-height: 1.58;
 }
 
@@ -2922,7 +2949,7 @@ select:focus {
 .simple-school-card em {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 780;
 }
 
 .simple-metrics strong {
@@ -2954,6 +2981,7 @@ select:focus {
   background: var(--brand-yellow);
   color: var(--ink);
   font-size: 13px;
+  font-weight: 850;
 }
 
 .simple-school-card,
@@ -2976,6 +3004,7 @@ select:focus {
 .simple-school-card strong,
 .simple-unlocked-card strong {
   font-size: 17px;
+  font-weight: 900;
   line-height: 1.18;
 }
 
@@ -2983,7 +3012,7 @@ select:focus {
 .simple-unlocked-card span {
   color: var(--muted);
   font-size: 13px;
-  font-weight: 780;
+  font-weight: 700;
 }
 
 .simple-school-card em {
@@ -3031,14 +3060,14 @@ select:focus {
 .simple-insight-card strong {
   color: var(--brand-blue);
   font-size: 15px;
-  font-weight: 950;
+  font-weight: 900;
   line-height: 1.25;
 }
 
 .simple-insight-card span {
   color: var(--ink);
   font-size: 13px;
-  font-weight: 780;
+  font-weight: 720;
   line-height: 1.48;
 }
 
@@ -3058,7 +3087,7 @@ select:focus {
 .simple-empty {
   color: var(--muted);
   font-size: 13px;
-  font-weight: 780;
+  font-weight: 720;
   line-height: 1.5;
 }
 
@@ -3110,7 +3139,7 @@ select:focus {
   background: #ffffff;
   color: var(--brand-blue);
   font-size: 12px;
-  font-weight: 900;
+  font-weight: 850;
 }
 
 .simple-full-hook {
@@ -3131,12 +3160,12 @@ select:focus {
 .simple-full-hook > div span {
   color: var(--brand-blue);
   font-size: 13px;
-  font-weight: 900;
+  font-weight: 850;
 }
 
 .simple-full-hook > div strong {
   font-size: clamp(20px, 3vw, 28px);
-  font-weight: 950;
+  font-weight: 900;
   line-height: 1.15;
 }
 
@@ -3160,12 +3189,12 @@ select:focus {
 
 .simple-full-hook li b {
   color: var(--brand-blue);
-  font-weight: 950;
+  font-weight: 900;
 }
 
 .simple-full-hook li span {
   color: var(--muted);
-  font-weight: 780;
+  font-weight: 720;
 }
 
 .simple-full-hook a {
@@ -3178,7 +3207,7 @@ select:focus {
   background: var(--brand-blue);
   color: #ffffff;
   font-size: 14px;
-  font-weight: 950;
+  font-weight: 900;
   text-decoration: none;
   white-space: nowrap;
 }
@@ -3226,6 +3255,7 @@ select:focus {
 
   .simple-form-card,
   .simple-result-hero,
+  .simple-ai-panel,
   .simple-score-breakdown,
   .simple-score-strip,
   .simple-context,
@@ -3307,6 +3337,105 @@ select:focus {
   }
 
   .simple-hero h1 {
-    font-size: 36px;
+    font-size: 32px;
+  }
+}
+
+@media (max-width: 520px) {
+  .simple-page {
+    font-size: 14px;
+  }
+
+  .simple-shell {
+    width: min(100% - 16px, 430px);
+    padding-top: 10px;
+  }
+
+  .simple-header {
+    align-items: center;
+  }
+
+  .simple-brand span {
+    gap: 1px;
+  }
+
+  .simple-intro-panel,
+  .simple-form-card,
+  .simple-result-hero,
+  .simple-ai-panel,
+  .simple-focus,
+  .simple-student-read,
+  .simple-score-strip,
+  .simple-schools,
+  .simple-lift,
+  .simple-next,
+  .simple-full-hook {
+    padding: 12px;
+  }
+
+  .simple-form-card {
+    gap: 10px;
+  }
+
+  .simple-hero {
+    gap: 6px;
+  }
+
+  .simple-hero h1 {
+    font-size: 29px;
+    line-height: 1.14;
+  }
+
+  .simple-hero span,
+  .simple-student-read p,
+  .simple-ai-card p {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .simple-result-hero h2 {
+    font-size: 24px;
+    line-height: 1.18;
+  }
+
+  .simple-section-title {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .simple-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .simple-metrics article:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .simple-metrics strong {
+    font-size: 27px;
+  }
+
+  .simple-ai-card,
+  .simple-insight-card,
+  .simple-school-card,
+  .simple-unlocked-card,
+  .simple-empty {
+    min-height: 0;
+    padding: 10px;
+  }
+
+  .simple-school-card strong,
+  .simple-unlocked-card strong {
+    font-size: 15px;
+  }
+
+  .simple-checklist {
+    gap: 6px;
+  }
+
+  .simple-checklist span {
+    padding: 6px 8px;
+    font-size: 11px;
   }
 }

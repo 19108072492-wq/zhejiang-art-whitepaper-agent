@@ -15,7 +15,15 @@ const parentNarrativeFields = [
   "nextStepAdvice"
 ];
 
-const simpleNarrativeFields = ["headline", "advisorHook", "nextStep"];
+const simpleNarrativeFields = ["headline", "stageGoalInsight", "scoreInsight", "gapReason", "schoolOpportunity", "nextStep"];
+const simpleNarrativeLimits: Record<string, number> = {
+  headline: 30,
+  stageGoalInsight: 64,
+  scoreInsight: 58,
+  gapReason: 58,
+  schoolOpportunity: 58,
+  nextStep: 48
+};
 
 const fieldFallback: Record<string, string> = {
   parentSummary: "从当前成绩结构看，孩子目前已经具备一定升学基础。后续需要重点关注文化课总分与目标院校参考线之间的差距，尤其是优先级较高的学科是否能形成稳定提分。",
@@ -26,6 +34,9 @@ const fieldFallback: Record<string, string> = {
 };
 
 const internalWordReplacements: [string, string][] = [
+  ["AI解读", "分析报告"],
+  ["AI分析", "分析"],
+  ["AI", ""],
   ["顾问视角", "家长阅读建议"],
   ["面谈结论", "当前分析结论"],
   ["现场确认", "后续建议补充确认"],
@@ -66,16 +77,19 @@ const parentNarrativeSystemPrompt = [
 
 const simpleNarrativeSystemPrompt = [
   "你是一名浙江艺考升学快测助手。",
-  "你的任务是基于系统已计算好的数据，为家长生成极短、专业、可直接阅读的快测解读。",
+  "你的任务是基于系统已计算好的数据，为家长生成短而有重点的快测分析报告。",
   "严格要求：",
   "1. 必须优先使用 simplePayload.dataContext 这份后台上传数据摘要，以及系统已经计算好的院校、分数、位次、差距和样本。",
   "2. 只能解释输入数据，不得编造院校、专业、分数线、位次号、计划数。",
   "3. 输出必须是严格 JSON，不要 Markdown，不要解释过程。",
-  "4. 只输出 headline、advisorHook、nextStep 三个字段。",
-  "5. headline 控制在 24 字以内；advisorHook 控制在 32 字以内；nextStep 控制在 36 字以内。",
-  "6. 不要写完整学习规划，不要给长篇建议，不要承诺录取结果。",
-  "7. 不要出现顾问、话术、邀约、成交、客户、转化等内部服务词。",
-  "8. 每个字段必须引用至少一个具体数据、位次、差距、院校样本或下一步动作。"
+  "4. 必须结合首页家长选择：studentStage、planningGoal、familyBoundary、scoreSource。不能只按分数泛泛分析。",
+  "5. 只输出 headline、stageGoalInsight、scoreInsight、gapReason、schoolOpportunity、nextStep 六个字段。",
+  "6. headline 控制在30字以内；stageGoalInsight 控制在64字以内；scoreInsight、gapReason、schoolOpportunity 控制在58字以内；nextStep 控制在48字以内。",
+  "7. stageGoalInsight 必须同时体现学生阶段和升学目标，例如高二提前规划、复读再规划、冲公办本科、先保本科等。",
+  "8. 如果 familyBoundary 是省内优先，不要泛泛写“省内外机会”，应写省内样本或是否需要看省外增量。",
+  "9. 不要写完整学习规划，不要给长篇建议，不要承诺录取结果。",
+  "10. 不要出现 AI、顾问、话术、邀约、成交、客户、转化等内部服务词。",
+  "11. 每个字段必须引用至少一个具体数据、位次、差距、院校样本、差距原因、首页选择或下一步动作。"
 ].join("\n");
 
 function jsonResponse(status: number, payload: JsonObject) {
@@ -145,35 +159,54 @@ function buildSimpleNarrativeFallback(simplePayload: JsonObject) {
   const current = Number(simplePayload.currentCompositeScore || 0);
   const gap = Number(simplePayload.compositeGap || 0);
   const rank = Number(simplePayload.estimatedRank || 0);
+  const context = asObject(simplePayload.context);
+  const contextAnalysis = asObject(simplePayload.contextAnalysis);
+  const studentStage = String(context.studentStage || "高三下学期");
+  const planningGoal = String(context.planningGoal || "先保本科");
+  const familyBoundary = String(context.familyBoundary || "暂不确定");
+  const cultureTotal = Number(simplePayload.cultureTotal || 0);
+  const professionalScore = Number(simplePayload.professionalScore || 0);
   const unlockedSchools = Array.isArray(simplePayload.unlockedSchools)
     ? simplePayload.unlockedSchools.map(String).filter(Boolean)
     : [];
+  const gapReason = professionalScore >= 250 && cultureTotal < 470
+    ? "专业分有支撑，主要看文化总分能否稳定拉动。"
+    : professionalScore < 230 && cultureTotal >= 500
+      ? "文化基础相对更稳，专业分会影响综合分效率。"
+      : "需要同时看文化波动和专业小分线，避免只看单次总分。";
   return {
-    headline: cleanSimpleText(`当前综合分 ${current}，先看层次`, 24),
-    advisorHook: cleanSimpleText(rank ? `位次约 ${rank} 名，核对院校梯度` : "位次待匹配，先看综合分层次", 32),
-    nextStep: cleanSimpleText(unlockedSchools[0] ? `提分后新增关注 ${unlockedSchools[0]}` : `先确认 ${gap} 分差距能否拉动`, 36)
+    headline: cleanSimpleText(`当前综合分 ${current}，先看层次`, simpleNarrativeLimits.headline),
+    stageGoalInsight: cleanSimpleText(contextAnalysis.stageGoalInsight || `${studentStage}，${planningGoal}；${familyBoundary}。先按当前分数校准路径。`, simpleNarrativeLimits.stageGoalInsight),
+    scoreInsight: cleanSimpleText(rank ? `估算位次约 ${rank} 名，距目标还差 ${gap} 分。` : `当前距目标还差 ${gap} 分，位次待校准。`, simpleNarrativeLimits.scoreInsight),
+    gapReason: cleanSimpleText(gapReason, simpleNarrativeLimits.gapReason),
+    schoolOpportunity: cleanSimpleText(unlockedSchools[0] ? `提分后可新增关注 ${unlockedSchools[0]} 等样本。` : "先确认当前冲稳保层次，再看专业方向。", simpleNarrativeLimits.schoolOpportunity),
+    nextStep: cleanSimpleText(`补充近三次文化成绩，判断 ${Math.ceil(gap / 0.5)} 分提升空间。`, simpleNarrativeLimits.nextStep)
   };
 }
 
 function normalizeSimpleNarratives(value: unknown, fallback: Record<string, string>) {
   const source = asObject(value);
   return simpleNarrativeFields.reduce((result, field) => {
-    const maxLength = field === "headline" ? 24 : field === "advisorHook" ? 32 : 36;
-    result[field] = cleanSimpleText(source[field], maxLength) || fallback[field];
+    const maxLength = simpleNarrativeLimits[field] || 48;
+    const legacyValue = field === "scoreInsight" ? source.advisorHook : "";
+    result[field] = cleanSimpleText(source[field], maxLength) || cleanSimpleText(legacyValue, maxLength) || fallback[field];
     return result;
   }, {} as Record<string, string>);
 }
 
 function buildSimpleNarrativePrompt(simplePayload: JsonObject, sourceLabel: string) {
   return [
-    "请根据以下结构化数据，生成浙江艺考升学快测中的 3 条短解读。",
+    "请根据以下结构化数据，生成浙江艺考升学快测中的分析报告。",
     "",
     "输出 JSON 字段：",
-    "- headline：一句核心判断，24字以内，必须包含当前综合分或差距",
-    "- advisorHook：家长可直接阅读的补充判断，32字以内，必须包含位次、院校样本或层次判断",
-    "- nextStep：下一步建议，36字以内，必须包含一个具体动作",
+    "- headline：一句核心判断，30字以内，必须包含当前综合分或差距",
+    "- stageGoalInsight：阶段目标分析，64字以内，必须结合 studentStage、planningGoal、familyBoundary，不能泛泛写",
+    "- scoreInsight：定位判断，58字以内，必须包含综合分、位次或目标差距",
+    "- gapReason：差距原因，58字以内，必须说明文化、专业或稳定性中的一个重点",
+    "- schoolOpportunity：院校吸引点，58字以内，必须结合当前样本、提分后样本或最低样本线",
+    "- nextStep：下一步动作，48字以内，必须包含一个具体动作",
     "",
-    "注意：不要输出完整学习规划，不要长篇叙述，不要录取承诺，不要出现内部服务词。优先使用 simplePayload.dataContext 这份后台上传数据摘要，以及 simplePayload 中的 keyTakeaways、currentSamples、unlockedSchools 和 nextCheckpoints。",
+    "注意：必须结合首页家长选择，不要只看分数；不要输出完整学习规划，不要长篇叙述，不要录取承诺，不要出现 AI 或内部服务词。优先使用 simplePayload.dataContext 这份后台上传数据摘要，以及 simplePayload 中的 context、contextAnalysis、keyTakeaways、studentInterpretation、currentSamples、lowestSample、unlockedSchools 和 nextCheckpoints。",
     "",
     `数据来源：${sourceLabel}`,
     `结构化数据如下：${JSON.stringify(simplePayload)}`
