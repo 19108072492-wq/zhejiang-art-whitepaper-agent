@@ -184,8 +184,11 @@ test("front end keeps AI secrets out of browser files", async () => {
 });
 
 test("admin page supports secret link auto-login without keeping secret in URL", async () => {
+  const adminHtml = await readFile(resolve(root, "admin.html"), "utf8");
   const adminScript = await readFile(resolve(root, "src/admin.mjs"), "utf8");
 
+  assert.equal(adminHtml.includes("./config.js"), true);
+  assert.ok(adminHtml.indexOf("./config.js") < adminHtml.indexOf("./src/admin.mjs"));
   assert.equal(adminScript.includes("URLSearchParams"), true);
   assert.equal(adminScript.includes("adminSecret"), true);
   assert.equal(adminScript.includes("history.replaceState"), true);
