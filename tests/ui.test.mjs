@@ -27,6 +27,7 @@ test("simple version has an independent fast-entry page", async () => {
   assert.equal(simpleHtml.includes("./src/simple-app.mjs"), true);
   assert.equal(simpleHtml.includes("./config.js"), true);
   assert.equal(simpleHtml.includes("./assets/feifan-logo.jpg"), true);
+  assert.equal(simpleHtml.includes('name="studentName"'), true);
   assert.equal(simpleHtml.includes('name="artCategory"'), true);
   assert.equal(simpleHtml.includes('name="cultureTotal"'), true);
   assert.equal(simpleHtml.includes('name="professionalScore"'), true);
@@ -235,6 +236,10 @@ test("supabase edge function reads AI key from server secrets", async () => {
 test("supabase data function persists whitepaper datasets with admin secret", async () => {
   const dataFunction = await readFile(resolve(root, "supabase/functions/data/index.ts"), "utf8");
   const config = await readFile(resolve(root, "supabase/config.toml"), "utf8");
+  const migrations = [
+    await readFile(resolve(root, "supabase/migrations/20260704000000_create_whitepaper_datasets.sql"), "utf8"),
+    await readFile(resolve(root, "supabase/migrations/20260704002000_create_whitepaper_report_records.sql"), "utf8")
+  ].join("\n");
 
   for (const token of [
     "getDatasets",
@@ -242,14 +247,49 @@ test("supabase data function persists whitepaper datasets with admin secret", as
     "saveRankTable",
     "clearProgramCategory",
     "clearRankTable",
+    "saveReportRecord",
+    "getReportRecords",
     'Deno.env.get("ADMIN_SECRET")',
     'Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")',
-    "whitepaper_datasets"
+    "whitepaper_datasets",
+    "whitepaper_report_records"
   ]) {
     assert.equal(dataFunction.includes(token), true);
   }
+  assert.equal(migrations.includes("whitepaper_report_records"), true);
+  assert.equal(migrations.includes("enable row level security"), true);
   assert.equal(config.includes("[functions.data]"), true);
   assert.equal(config.includes("verify_jwt = false"), true);
+});
+
+test("simple report submits student name and generated report record", async () => {
+  const simpleHtml = await readFile(resolve(root, "simple.html"), "utf8");
+  const simpleScript = await readFile(resolve(root, "src/simple-app.mjs"), "utf8");
+  const dataStore = await readFile(resolve(root, "src/data-store.mjs"), "utf8");
+
+  assert.equal(simpleHtml.includes("学生姓名"), true);
+  assert.equal(simpleHtml.includes('name="studentName"'), true);
+  assert.equal(simpleScript.includes("studentName"), true);
+  assert.equal(simpleScript.includes("saveReportRecordRemote"), true);
+  assert.equal(simpleScript.includes("buildReportRecordPayload"), true);
+  assert.equal(simpleScript.includes("saveSimpleReportRecord"), true);
+  assert.equal(dataStore.includes("buildReportRecordPayload"), true);
+  assert.equal(dataStore.includes("saveReportRecordRemote"), true);
+});
+
+test("admin page can view generated report records after secret login", async () => {
+  const adminHtml = await readFile(resolve(root, "admin.html"), "utf8");
+  const adminScript = await readFile(resolve(root, "src/admin.mjs"), "utf8");
+  const styles = await readFile(resolve(root, "styles.css"), "utf8");
+
+  assert.equal(adminHtml.includes("生成记录"), true);
+  assert.equal(adminHtml.includes('id="report-record-list"'), true);
+  assert.equal(adminHtml.includes('id="refresh-records"'), true);
+  assert.equal(adminScript.includes("loadReportRecordsRemote"), true);
+  assert.equal(adminScript.includes("renderReportRecords"), true);
+  assert.equal(adminScript.includes("refreshReportRecords"), true);
+  assert.equal(styles.includes(".report-record-list"), true);
+  assert.equal(styles.includes(".report-record-card"), true);
 });
 
 test("report uses parent-facing planning sections instead of internal interview wording", async () => {

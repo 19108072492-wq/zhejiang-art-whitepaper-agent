@@ -37,6 +37,57 @@ function normalizePayload(records, meta = {}) {
   };
 }
 
+function toNumber(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : 0;
+}
+
+function cleanText(value, maxLength = 120) {
+  return String(value ?? "").replace(/\s+/g, " ").trim().slice(0, maxLength);
+}
+
+function cleanRecordObject(value) {
+  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+}
+
+function compactProgram(program) {
+  if (!program || typeof program !== "object") return null;
+  return {
+    school: cleanText(program.school, 80),
+    program: cleanText(program.program, 100),
+    province: cleanText(program.province, 30),
+    city: cleanText(program.city, 30),
+    schoolLevel: cleanText(program.schoolLevel, 80),
+    minScore: toNumber(program.minScore),
+    minRank: toNumber(program.minRank),
+    diff: toNumber(program.diff)
+  };
+}
+
+function compactList(items, mapper, limit = 6) {
+  return (Array.isArray(items) ? items : [])
+    .map(mapper)
+    .filter(Boolean)
+    .slice(0, limit);
+}
+
+function compactInsight(item) {
+  if (!item || typeof item !== "object") return null;
+  return {
+    title: cleanText(item.title || item.label, 40),
+    body: cleanText(item.body || item.detail, 140),
+    value: cleanText(item.value, 40)
+  };
+}
+
+function compactSamples(samples = {}) {
+  return {
+    chong: compactProgram(samples.chong),
+    wen: compactProgram(samples.wen),
+    bao: compactProgram(samples.bao)
+  };
+}
+
 function cachePayload(storageKey, records, meta = {}) {
   const payload = normalizePayload(records, meta);
   memoryPayloads.set(storageKey, payload);
@@ -260,6 +311,86 @@ export async function clearRankTableRemote({ adminSecret }) {
   cacheDatasets(result);
   remoteDataLoaded = true;
   return result;
+}
+
+export function buildReportRecordPayload({
+  input = {},
+  report = {},
+  narratives = {},
+  sourceLabel = "",
+  dataContext = {}
+} = {}) {
+  const scoreProfile = cleanRecordObject(report.scoreProfile);
+  const rankEstimate = cleanRecordObject(report.rankEstimate);
+  const reportContext = cleanRecordObject(report.context);
+  const normalizedCategory = normalizeArtCategory(input.artCategory || report.artCategory);
+
+  return {
+    studentName: cleanText(input.studentName, 40),
+    mode: "simple",
+    artCategory: normalizedCategory,
+    input: {
+      artCategory: normalizedCategory,
+      cultureTotal: toNumber(input.cultureTotal),
+      professionalScore: toNumber(input.professionalScore),
+      studentStage: cleanText(input.studentStage || reportContext.studentStage, 30),
+      scoreSource: cleanText(input.scoreSource || reportContext.scoreSource, 30),
+      planningGoal: cleanText(input.planningGoal || reportContext.planningGoal, 40),
+      familyBoundary: cleanText(input.familyBoundary || reportContext.familyBoundary, 40)
+    },
+    scoreProfile: {
+      cultureTotal: toNumber(scoreProfile.cultureTotal),
+      professionalScore: toNumber(scoreProfile.professionalScore),
+      currentCompositeScore: toNumber(scoreProfile.currentCompositeScore),
+      targetCompositeScore: toNumber(scoreProfile.targetCompositeScore),
+      compositeGap: toNumber(scoreProfile.compositeGap),
+      cultureLiftNeeded: toNumber(scoreProfile.cultureLiftNeeded)
+    },
+    rankEstimate: {
+      score: toNumber(rankEstimate.score),
+      matchedScore: toNumber(rankEstimate.matchedScore),
+      rank: toNumber(rankEstimate.rank)
+    },
+    narratives: {
+      headline: cleanText(narratives.headline, 40),
+      stageGoalInsight: cleanText(narratives.stageGoalInsight, 90),
+      scoreInsight: cleanText(narratives.scoreInsight, 90),
+      gapReason: cleanText(narratives.gapReason, 90),
+      schoolOpportunity: cleanText(narratives.schoolOpportunity, 90),
+      nextStep: cleanText(narratives.nextStep, 80)
+    },
+    report: {
+      currentSamples: compactSamples(report.currentSamples),
+      unlockedPrograms: compactList(report.unlockedPrograms, compactProgram, 2),
+      keyTakeaways: compactList(report.keyTakeaways, compactInsight, 3),
+      studentInterpretation: {
+        title: cleanText(report.studentInterpretation?.title, 60),
+        body: cleanText(report.studentInterpretation?.body, 180)
+      },
+      scoreStructure: compactList(report.scoreStructure, compactInsight, 4),
+      nextCheckpoints: compactList(report.nextCheckpoints, compactInsight, 3),
+      consultChecklist: (Array.isArray(report.consultChecklist) ? report.consultChecklist : [])
+        .map((item) => cleanText(item, 30))
+        .filter(Boolean)
+        .slice(0, 8)
+    },
+    meta: {
+      sourceLabel: cleanText(sourceLabel, 20),
+      dataContext: cleanRecordObject(dataContext)
+    }
+  };
+}
+
+export async function saveReportRecordRemote(record) {
+  return requestDataApi("saveReportRecord", { record });
+}
+
+export async function loadReportRecordsRemote({ adminSecret, limit = 80 } = {}) {
+  const result = await requestDataApi("getReportRecords", {
+    adminSecret,
+    limit
+  });
+  return Array.isArray(result.records) ? result.records : [];
 }
 
 export function cacheProgramPayload(records, meta = {}) {

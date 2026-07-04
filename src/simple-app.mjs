@@ -5,10 +5,12 @@ import {
   normalizeSimpleNarratives
 } from "./simple-core.mjs";
 import {
+  buildReportRecordPayload,
   buildDataContext,
   hydrateRemoteData,
   loadProgramPayload,
-  loadRankPayload
+  loadRankPayload,
+  saveReportRecordRemote
 } from "./data-store.mjs";
 import { samplePrograms } from "./sample-data.mjs";
 import { normalizeArtCategory } from "./categories.mjs";
@@ -70,6 +72,7 @@ function getProgramSource(artCategory) {
 function readInput() {
   const data = new FormData(form);
   return {
+    studentName: String(data.get("studentName") || "").trim(),
     artCategory: String(data.get("artCategory") || "美术与设计"),
     cultureTotal: toNumber(data.get("cultureTotal")),
     professionalScore: toNumber(data.get("professionalScore")),
@@ -81,6 +84,9 @@ function readInput() {
 }
 
 function validateInput(input) {
+  if (!input.studentName) {
+    return "请填写学生姓名，方便后台记录本次报告。";
+  }
   if (input.cultureTotal <= 0 || input.cultureTotal > 750) {
     return "请填写文化总分，范围 0-750 分。";
   }
@@ -230,8 +236,9 @@ function renderAnalysisReport(narratives) {
   `;
 }
 
-function renderReport(report, narratives, source) {
+function renderReport(report, narratives, source, input) {
   const profile = report.scoreProfile;
+  const studentName = input?.studentName ? `${input.studentName}同学` : "孩子";
   form.hidden = true;
   document.body.classList.add("simple-report-mode");
   reportRoot.hidden = false;
@@ -242,7 +249,7 @@ function renderReport(report, narratives, source) {
     <section class="simple-card simple-result-hero">
       <div class="simple-report-brand">
         <img src="./assets/feifan-logo.jpg" alt="非凡教育标志">
-        <span>${escapeHtml(source.label)} · 快测报告</span>
+        <span>${escapeHtml(source.label)} · ${escapeHtml(studentName)}快测报告</span>
       </div>
       <h2>${escapeHtml(narratives.headline)}</h2>
       <div class="simple-metrics">
@@ -342,6 +349,22 @@ function renderReport(report, narratives, source) {
   reportRoot.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
+async function saveSimpleReportRecord({ input, report, narratives, source, dataContext }) {
+  const record = buildReportRecordPayload({
+    input,
+    report,
+    narratives,
+    sourceLabel: source.label,
+    dataContext
+  });
+  if (!record.studentName) return;
+  try {
+    await saveReportRecordRemote(record);
+  } catch (error) {
+    console.warn("保存报告记录失败", error);
+  }
+}
+
 async function requestSimpleNarratives(report, source, dataContext) {
   const fallback = buildSimpleNarrativeFallback(report);
   const agentApiUrl = getAgentApiUrl();
@@ -389,7 +412,8 @@ form.addEventListener("submit", async (event) => {
       rankEstimate: report.rankEstimate
     });
     const narratives = await requestSimpleNarratives(report, source, dataContext);
-    renderReport(report, narratives, source);
+    renderReport(report, narratives, source, input);
+    saveSimpleReportRecord({ input, report, narratives, source, dataContext });
   } finally {
     isGenerating = false;
     setLoading(false);

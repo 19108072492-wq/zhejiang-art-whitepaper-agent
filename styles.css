@@ -1819,6 +1819,13 @@ select:focus {
   padding: 18px;
 }
 
+.admin-record-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .category-picker {
   display: flex;
   flex-wrap: wrap;
@@ -1979,6 +1986,112 @@ select:focus {
 .preview-wrap {
   min-width: 0;
   overflow-x: auto;
+}
+
+.report-record-list {
+  display: grid;
+  gap: 12px;
+}
+
+.report-record-card {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 13px;
+  background: var(--surface);
+}
+
+.report-record-card header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.report-record-card header div {
+  display: grid;
+  gap: 3px;
+}
+
+.report-record-card strong {
+  color: var(--ink);
+  font-size: 17px;
+  line-height: 1.2;
+}
+
+.report-record-card header span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.report-record-card em {
+  border-radius: 999px;
+  padding: 5px 8px;
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.record-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.record-metrics span {
+  display: grid;
+  gap: 2px;
+  border-radius: 8px;
+  padding: 8px;
+  background: var(--surface-strong);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.record-metrics b {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.report-record-card p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 850;
+  line-height: 1.55;
+}
+
+.report-record-card dl {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+}
+
+.report-record-card dl div {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+
+.report-record-card dt {
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.report-record-card dd {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.5;
 }
 
 .preview-table {

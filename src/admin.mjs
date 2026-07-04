@@ -3,6 +3,7 @@ import {
   clearProgramCategoryRemote,
   clearRankTableRemote,
   hydrateRemoteData,
+  loadReportRecordsRemote,
   loadProgramPayload,
   loadRankPayload,
   saveProgramCategoryRemote,
@@ -32,6 +33,9 @@ const rankStatusNode = document.querySelector("#rank-status");
 const rankSummaryNode = document.querySelector("#rank-summary");
 const rankPreviewWrap = document.querySelector("#rank-preview-wrap");
 const rankStoredState = document.querySelector("#rank-stored-state");
+const recordStatusNode = document.querySelector("#record-status");
+const reportRecordList = document.querySelector("#report-record-list");
+const refreshRecordsButton = document.querySelector("#refresh-records");
 const programCategoryInputs = Array.from(document.querySelectorAll('input[name="programCategory"]'));
 
 let currentImport = null;
@@ -116,6 +120,13 @@ function setRankStatus(message, kind = "info") {
   rankStatusNode.hidden = !message;
 }
 
+function setRecordStatus(message, kind = "info") {
+  if (!recordStatusNode) return;
+  recordStatusNode.textContent = message;
+  recordStatusNode.dataset.kind = kind;
+  recordStatusNode.hidden = !message;
+}
+
 function selectedCategory(inputs) {
   return normalizeArtCategory(inputs.find((input) => input.checked)?.value || ART_CATEGORIES[0].value);
 }
@@ -186,6 +197,58 @@ function renderRankStoredState() {
     <span>${escapeHtml(formatTime(payload.meta?.importedAt))}</span>
     ${renderCategoryCounts(payload.records)}
   `;
+}
+
+function formatScore(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number === 0) return "待匹配";
+  return Number.isInteger(number) ? String(number) : number.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+}
+
+function recordLine(label, value) {
+  const safeValue = String(value ?? "").trim();
+  if (!safeValue) return "";
+  return `<span><b>${escapeHtml(label)}</b>${escapeHtml(safeValue)}</span>`;
+}
+
+function renderReportRecords(records = []) {
+  if (!reportRecordList) return;
+  if (!records.length) {
+    reportRecordList.innerHTML = '<div class="empty-tier">暂时还没有前台生成记录。</div>';
+    return;
+  }
+
+  reportRecordList.innerHTML = records.map((record) => {
+    const scoreProfile = record.scoreProfile || {};
+    const rankEstimate = record.rankEstimate || {};
+    const narratives = record.narratives || {};
+    const input = record.input || {};
+    const currentScore = formatScore(scoreProfile.currentCompositeScore);
+    const rank = rankEstimate.rank ? `${rankEstimate.rank}` : "待匹配";
+    const headline = narratives.headline || "已生成快测报告";
+    return `
+      <article class="report-record-card">
+        <header>
+          <div>
+            <strong>${escapeHtml(record.studentName || "未命名学生")}</strong>
+            <span>${escapeHtml(formatTime(record.createdAt))}</span>
+          </div>
+          <em>${escapeHtml(record.artCategory || input.artCategory || "未分类")}</em>
+        </header>
+        <div class="record-metrics">
+          ${recordLine("综合分", currentScore)}
+          ${recordLine("位次", rank)}
+          ${recordLine("目标", input.planningGoal)}
+        </div>
+        <p>${escapeHtml(headline)}</p>
+        <dl>
+          ${narratives.scoreInsight ? `<div><dt>定位</dt><dd>${escapeHtml(narratives.scoreInsight)}</dd></div>` : ""}
+          ${narratives.gapReason ? `<div><dt>差距</dt><dd>${escapeHtml(narratives.gapReason)}</dd></div>` : ""}
+          ${narratives.nextStep ? `<div><dt>下一步</dt><dd>${escapeHtml(narratives.nextStep)}</dd></div>` : ""}
+        </dl>
+      </article>
+    `;
+  }).join("");
 }
 
 function renderPreview(records) {
@@ -487,6 +550,27 @@ async function refreshRemoteState() {
   renderRankStoredState();
 }
 
+async function refreshReportRecords() {
+  const adminSecret = storedAdminSecret();
+  if (!adminSecret) {
+    renderReportRecords([]);
+    setRecordStatus("请先输入后台密钥。", "error");
+    return;
+  }
+  if (refreshRecordsButton) refreshRecordsButton.disabled = true;
+  setRecordStatus("正在读取生成记录。");
+  try {
+    const records = await loadReportRecordsRemote({ adminSecret, limit: 80 });
+    renderReportRecords(records);
+    setRecordStatus(records.length ? `已读取 ${records.length} 条生成记录。` : "暂时还没有生成记录。", "success");
+  } catch (error) {
+    renderReportRecords([]);
+    setRecordStatus(messageFromError(error, "生成记录读取失败。"), "error");
+  } finally {
+    if (refreshRecordsButton) refreshRecordsButton.disabled = false;
+  }
+}
+
 async function attemptLogin(adminSecret) {
   if (!adminSecret) {
     setLoginError("请输入后台密钥。");
@@ -496,6 +580,7 @@ async function attemptLogin(adminSecret) {
     await validateAdminSecretRemote(adminSecret);
     unlockAdmin(adminSecret);
     await refreshRemoteState();
+    await refreshReportRecords();
   } catch (error) {
     sessionStorage.removeItem(ADMIN_SESSION_KEY);
     showLogin();
@@ -513,10 +598,13 @@ adminLogoutButton?.addEventListener("click", () => {
   showLogin();
 });
 
+refreshRecordsButton?.addEventListener("click", refreshReportRecords);
+
 renderSummary(summaryNode);
 renderSummary(rankSummaryNode);
 renderStoredState();
 renderRankStoredState();
+renderReportRecords([]);
 
 const adminSecretFromUrl = getAdminSecretFromUrl();
 const adminSecretFromSession = storedAdminSecret();

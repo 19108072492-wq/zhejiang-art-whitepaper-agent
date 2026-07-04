@@ -2,6 +2,19 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 
 type JsonRecord = Record<string, unknown>;
 type DatasetKey = "programs" | "rank";
+type ReportRecordRow = {
+  id: string;
+  student_name: string;
+  mode: string;
+  art_category: string | null;
+  input: JsonRecord | null;
+  score_profile: JsonRecord | null;
+  rank_estimate: JsonRecord | null;
+  narratives: JsonRecord | null;
+  report: JsonRecord | null;
+  meta: JsonRecord | null;
+  created_at: string;
+};
 
 const corsHeaders = {
   "access-control-allow-origin": "*",
@@ -75,6 +88,22 @@ function asRecords(value: unknown): JsonRecord[] {
 
 function asMeta(value: unknown): JsonRecord {
   return value && typeof value === "object" && !Array.isArray(value) ? value as JsonRecord : {};
+}
+
+function cleanText(value: unknown, maxLength = 120) {
+  return String(value ?? "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maxLength);
+}
+
+function toNumber(value: unknown, fallback = 0) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+
+function jsonByteSize(value: unknown) {
+  return new TextEncoder().encode(JSON.stringify(value ?? {})).byteLength;
 }
 
 function safeError(error: unknown, fallback = "数据接口处理失败") {
@@ -251,6 +280,80 @@ async function clearRankTable(body: JsonRecord) {
   return getDatasets();
 }
 
+function sanitizeReportRecord(body: JsonRecord) {
+  const record = asMeta(body.record);
+  if (jsonByteSize(record) > 120_000) {
+    throw new Error("报告记录内容过大，请刷新后重新生成。");
+  }
+
+  const studentName = cleanText(record.studentName, 40);
+  if (!studentName) throw new Error("缺少学生姓名，无法保存生成记录。");
+
+  return {
+    student_name: studentName,
+    mode: cleanText(record.mode || "simple", 20) || "simple",
+    art_category: normalizeArtCategory(record.artCategory),
+    input: asMeta(record.input),
+    score_profile: asMeta(record.scoreProfile),
+    rank_estimate: asMeta(record.rankEstimate),
+    narratives: asMeta(record.narratives),
+    report: asMeta(record.report),
+    meta: asMeta(record.meta)
+  };
+}
+
+async function saveReportRecord(body: JsonRecord) {
+  const supabase = getSupabaseClient();
+  const payload = sanitizeReportRecord(body);
+  const { data, error } = await supabase
+    .from("whitepaper_report_records")
+    .insert(payload)
+    .select("id, created_at")
+    .single();
+
+  if (error) throw new Error(`保存报告记录失败：${error.message}`);
+  return {
+    ok: true,
+    record: {
+      id: data?.id || "",
+      createdAt: data?.created_at || ""
+    }
+  };
+}
+
+function normalizeReportRecord(row: ReportRecordRow) {
+  return {
+    id: row.id,
+    studentName: row.student_name,
+    mode: row.mode,
+    artCategory: row.art_category || "",
+    input: row.input || {},
+    scoreProfile: row.score_profile || {},
+    rankEstimate: row.rank_estimate || {},
+    narratives: row.narratives || {},
+    report: row.report || {},
+    meta: row.meta || {},
+    createdAt: row.created_at
+  };
+}
+
+async function getReportRecords(body: JsonRecord) {
+  await requireAdminSecret(body);
+  const supabase = getSupabaseClient();
+  const limit = Math.min(200, Math.max(1, toNumber(body.limit, 80)));
+  const { data, error } = await supabase
+    .from("whitepaper_report_records")
+    .select("id, student_name, mode, art_category, input, score_profile, rank_estimate, narratives, report, meta, created_at")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) throw new Error(`读取报告记录失败：${error.message}`);
+  return {
+    ok: true,
+    records: (Array.isArray(data) ? data : []).map((row) => normalizeReportRecord(row as ReportRecordRow))
+  };
+}
+
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -281,6 +384,12 @@ Deno.serve(async (request) => {
     }
     if (action === "clearRankTable") {
       return jsonResponse(200, await clearRankTable(body));
+    }
+    if (action === "saveReportRecord") {
+      return jsonResponse(200, await saveReportRecord(body));
+    }
+    if (action === "getReportRecords") {
+      return jsonResponse(200, await getReportRecords(body));
     }
 
     return jsonResponse(400, { ok: false, error: "未知数据操作。" });
