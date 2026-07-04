@@ -235,6 +235,14 @@ function renderReport(report, narratives, source) {
       </div>
     </section>
 
+    <section class="simple-card simple-student-read">
+      <div class="simple-section-title">
+        <span>孩子解读</span>
+        <strong>${escapeHtml(report.studentInterpretation.title)}</strong>
+      </div>
+      <p>${escapeHtml(report.studentInterpretation.body)}</p>
+    </section>
+
     <section class="simple-card simple-score-strip">
       <div class="simple-section-title">
         <span>成绩结构</span>

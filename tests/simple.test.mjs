@@ -113,6 +113,8 @@ test("simple report includes compact parent-facing briefing blocks", () => {
 
   assert.equal(report.scoreStructure.length, 4);
   assert.equal(report.contextCards.length, 4);
+  assert.equal(typeof report.studentInterpretation.title, "string");
+  assert.match(report.studentInterpretation.body, /孩子|当前综合分|专业|文化/);
   assert.equal(report.keyTakeaways.length, 3);
   assert.ok(report.positionSignals.length >= 3);
   assert.equal(report.liftLevers.length, 3);

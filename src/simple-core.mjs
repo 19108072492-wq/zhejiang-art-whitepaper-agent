@@ -254,6 +254,43 @@ function buildSimpleNextCheckpoints(report) {
   }));
 }
 
+function buildSimpleStudentInterpretation(report) {
+  const profile = report.scoreProfile;
+  const gapText = profile.compositeGap > 0
+    ? `距离目标综合分还差 ${formatScore(profile.compositeGap)} 分`
+    : "当前已超过默认目标综合分";
+  const rankText = report.rankEstimate?.rank ? `，估算位次约 ${report.rankEstimate.rank} 名` : "";
+
+  if (profile.currentCompositeScore >= 550) {
+    return {
+      title: "已进入较稳窗口",
+      body: `孩子当前综合分 ${formatScore(profile.currentCompositeScore)}${rankText}，${gapText}。这类情况重点不是盲目加码，而是确认成绩稳定性，再看能否打开更高层次样本。`
+    };
+  }
+  if (profile.professionalScore >= 250 && profile.cultureTotal < 470) {
+    return {
+      title: "专业有支撑，文化决定上限",
+      body: `孩子专业成绩 ${formatScore(profile.professionalScore)} 分，对综合分有一定支撑；当前综合分 ${formatScore(profile.currentCompositeScore)}，${gapText}。下一步要优先看文化总分能否稳定拉动。`
+    };
+  }
+  if (profile.professionalScore < 230 && profile.cultureTotal >= 500) {
+    return {
+      title: "文化有基础，专业需要稳住",
+      body: `孩子文化总分 ${formatScore(profile.cultureTotal)} 分具备一定基础，但专业成绩 ${formatScore(profile.professionalScore)} 分会影响综合分效率。后续要同时复核专业小分线和当前院校梯度。`
+    };
+  }
+  if (profile.compositeGap >= 35) {
+    return {
+      title: "处在追赶窗口",
+      body: `孩子当前综合分 ${formatScore(profile.currentCompositeScore)}，${gapText}。这类情况不适合平均用力，先确认近三次文化成绩波动，再判断最现实的提分空间。`
+    };
+  }
+  return {
+    title: "专业文化相对均衡",
+    body: `孩子当前综合分 ${formatScore(profile.currentCompositeScore)}${rankText}，专业和文化都有参考价值。现在更适合先做院校梯度初筛，再结合目标院校和单科成绩细化判断。`
+  };
+}
+
 function normalizeSimpleContext(input) {
   return {
     studentStage: String(input.studentStage || DEFAULT_SIMPLE_CONTEXT.studentStage),
@@ -442,6 +479,7 @@ export function buildSimpleReport(input, programs = [], rankRecords = []) {
     tierFallbacks: buildTierFallbacks(report),
     scoreStructure: buildSimpleScoreStructure(scoreProfile),
     contextCards: buildSimpleContextCards(input),
+    studentInterpretation: buildSimpleStudentInterpretation(report),
     keyTakeaways: buildSimpleKeyTakeaways(report),
     positionSignals: buildSimplePositionSignals(report),
     liftLevers: buildSimpleLiftLevers(report),

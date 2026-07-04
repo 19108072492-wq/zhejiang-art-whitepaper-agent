@@ -53,7 +53,7 @@ test("simple report renders compact professional briefing sections", async () =>
   const simpleScript = await readFile(resolve(root, "src/simple-app.mjs"), "utf8");
   const styles = await readFile(resolve(root, "styles.css"), "utf8");
 
-  for (const label of ["关键判断", "成绩结构", "当前院校快照", "提分后可能打开", "下一步确认"]) {
+  for (const label of ["关键判断", "孩子解读", "成绩结构", "当前院校快照", "提分后可能打开", "下一步确认"]) {
     assert.equal(simpleScript.includes(label), true);
   }
   assert.equal(simpleScript.includes("consultChecklist"), true);
@@ -67,6 +67,7 @@ test("simple report renders compact professional briefing sections", async () =>
   assert.equal(styles.includes(".simple-full-hook"), true);
   assert.equal(styles.includes(".simple-insight-grid"), true);
   assert.equal(styles.includes(".simple-focus-grid"), true);
+  assert.equal(styles.includes(".simple-student-read"), true);
   assert.equal(styles.includes(".simple-ai-summary"), true);
   assert.equal(styles.includes(".simple-checklist"), true);
 });
